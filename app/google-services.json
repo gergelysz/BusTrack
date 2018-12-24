@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "336432198314",
+    "firebase_url": "https://bustrack-46bf7.firebaseio.com",
+    "project_id": "bustrack-46bf7",
+    "storage_bucket": "bustrack-46bf7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:336432198314:android:c301858ed3abf65f",
+        "android_client_info": {
+          "package_name": "bustracker.ms.sapientia.ro.bustrack"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "336432198314-6gah92upi5alabjjk7r1ivl4iie4avar.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "bustracker.ms.sapientia.ro.bustrack",
+            "certificate_hash": "eb5689e1e4afb4ec998e0f98ac622437f076a316"
+          }
+        },
+        {
+          "client_id": "336432198314-ivpfn9k5fl71v4pda2dpcgchia6enf8a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNMC39xfNQrfGFNbDMxZOgFZKlmBZ6t6Y"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "336432198314-ivpfn9k5fl71v4pda2dpcgchia6enf8a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
