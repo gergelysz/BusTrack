@@ -1,8 +1,7 @@
 package bustracker.ms.sapientia.ro.bustrack.Data;
 
+import com.google.firebase.Timestamp;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-
-import java.sql.Timestamp;
 
 public class User {
 
@@ -10,17 +9,50 @@ public class User {
     private String bus;
     private String status;
     private Timestamp timestamp;
-    private LatLng coordinates;
+//    private LatLng coordinates;
+    private String latitude;
+    private String longitude;
 
     public User() {
     }
 
-    public User(String id, String bus, String status, Timestamp timestamp, LatLng coordinates) {
+//    public User(String id, String bus, String status, Timestamp timestamp, LatLng coordinates) {
+//        this.id = id;
+//        this.bus = bus;
+//        this.status = status;
+//        this.timestamp = timestamp;
+//        this.coordinates = coordinates;
+//    }
+//
+//    public User(String bus, String status, Timestamp timestamp, LatLng coordinates) {
+//        this.bus = bus;
+//        this.status = status;
+//        this.timestamp = timestamp;
+//        this.coordinates = coordinates;
+//    }
+
+
+    public User(String bus, String status, Timestamp timestamp) {
+        this.bus = bus;
+        this.status = status;
+        this.timestamp = timestamp;
+    }
+
+    public User(String id, String bus, String status, Timestamp timestamp, String latitude, String longitude) {
         this.id = id;
         this.bus = bus;
         this.status = status;
         this.timestamp = timestamp;
-        this.coordinates = coordinates;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public User(String bus, String status, Timestamp timestamp, String latitude, String longitude) {
+        this.bus = bus;
+        this.status = status;
+        this.timestamp = timestamp;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     public String getId() {
@@ -55,11 +87,27 @@ public class User {
         this.timestamp = timestamp;
     }
 
-    public LatLng getCoordinates() {
-        return coordinates;
+    public String getLatitude() {
+        return latitude;
     }
 
-    public void setCoordinates(LatLng coordinates) {
-        this.coordinates = coordinates;
+    public void setLatitude(String latitude) {
+        this.latitude = latitude;
     }
+
+    public String getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(String longitude) {
+        this.longitude = longitude;
+    }
+
+//    public LatLng getCoordinates() {
+//        return coordinates;
+//    }
+//
+//    public void setCoordinates(LatLng coordinates) {
+//        this.coordinates = coordinates;
+//    }
 }

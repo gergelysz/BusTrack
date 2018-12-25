@@ -1,35 +1,31 @@
 package bustracker.ms.sapientia.ro.bustrack;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
-import android.view.View;
-import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.QuerySnapshot;
-//import com.google.type.LatLng;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineListener;
 import com.mapbox.android.core.location.LocationEnginePriority;
@@ -38,7 +34,7 @@ import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
-//import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -48,44 +44,78 @@ import com.mapbox.mapboxsdk.location.modes.CameraMode;
 import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
-import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
-import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-import javax.annotation.Nullable;
+import java.util.Map;
 
 import bustracker.ms.sapientia.ro.bustrack.Data.Station;
+import bustracker.ms.sapientia.ro.bustrack.Data.User;
+
+//import com.google.type.LatLng;
+//import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+//import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+//import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, PermissionsListener {
 
     private static final String TAG = "MainActivity";
+
     private MapView mapView;
     private MapboxMap mapboxMap;
+
     private PermissionsManager permissionsManager;
 
     private FirebaseFirestore mFirestore;
 
     private LocationEngine locationEngine = null;
 
-    private LocationEngineListener locationEngineListener;
+    private User currentUser = null;
 
+    private ArrayList<User> usersList = new ArrayList<>();
     private ArrayList<Station> busStations = new ArrayList<>();
 
-    LocationComponent locationComponent = null;
-//    LocationLayerPlugin locationLayerPlugin = null;
+    private Map<User, Marker> users = new HashMap<>();
 
-    Location originLocation;
+    private static final int REQUEST_LOCATION = 1234;
 
+    private boolean mLocationPermissionGranted = false;
+
+//    private Map<String, Object> currentUserData = new HashMap<String, Object>() {
+//        {
+//            put("bus", currentBus);
+//            put("status", currentStatus);
+//            put("timestamp", Timestamp.now());
+////            put("coordinates", currentCoordinates);
+//            put("latitude", currentCoordinates.getLatitude());
+//            put("longitude", currentCoordinates.getLongitude());
+//        }
+//    };
+
+//    private Map<String, String> currentUserData = new HashMap<>();
+
+    //    private LatLng currentCoordinates;
+    private String latitude;
+    private String longitude;
+    private String currentBus = "0";
+    private String currentStatus = "waiting for bus";
+    private String currentUserId = null;
+
+    private boolean coordinatesFound;
+
+    private LocationManager locationManager;
+    private LocationListener locationListener;
+
+    @SuppressLint("LogNotTimber")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        /**
-         *   Mapbox access token is configured here. This needs to be called either in your application
-         *   object or in the same activity which contains the mapview.
+        /*
+            Mapbox access token is configured here. This needs to be called either in your application
+            object or in the same activity which contains the mapview.
          */
 
         Mapbox.getInstance(this, getString(R.string.access_token));
@@ -93,36 +123,39 @@ public class MainActivity extends AppCompatActivity
 
         Log.d(TAG, "Mapbox set...");
 
-        /**
-         *   This contains the MapView in XML and needs to be called after the access token is configured.
+        /*
+            This contains the MapView in XML and needs to be called after the access token is configured.
          */
 
         setContentView(R.layout.activity_main);
 
-        /**
-         *   Connecting to Firestore database
+        /*
+            Connecting to Firestore database
          */
 
         mFirestore = FirebaseFirestore.getInstance();
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
 
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
-        mapView.getMapAsync(mapboxMap -> {
+        mapView.getMapAsync((MapboxMap mapboxMap) -> {
 
             MainActivity.this.mapboxMap = mapboxMap;
 
             enableLocationComponent();
 
-            /**
-             *   Get stations from database
-             *   coordinates and name
+            /*
+                Get stations from database
+                coordinates and name
              */
 
-            setStations();
-        });
 
+            setStations();
+            getUsersData();
+        });
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -131,19 +164,19 @@ public class MainActivity extends AppCompatActivity
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show());
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
     }
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
@@ -175,7 +208,7 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
@@ -193,7 +226,7 @@ public class MainActivity extends AppCompatActivity
 
         }
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
@@ -230,6 +263,17 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
+
+        locationEngine.removeLocationUpdates();
+        locationEngine = null;
+
+        /*
+                Delete user's data from database
+                when the user closes the app.
+         */
+
+        if (currentUserId != null) mFirestore.collection("users").document(currentUserId).delete();
+
         super.onDestroy();
         mapView.onDestroy();
     }
@@ -258,7 +302,7 @@ public class MainActivity extends AppCompatActivity
                     .build();
 
             // Get an instance of the component
-            locationComponent = mapboxMap.getLocationComponent();
+            LocationComponent locationComponent = mapboxMap.getLocationComponent();
             locationComponent.setLocationEngine(locationEngine);
 
             // Activate with options
@@ -297,24 +341,68 @@ public class MainActivity extends AppCompatActivity
 
         Log.d(TAG, "initializing LocationEngine");
 
-        locationEngineListener = new LocationEngineListener() {
+        LocationEngineListener locationEngineListener = new LocationEngineListener() {
             @Override
             public void onConnected() {
                 locationEngine.requestLocationUpdates();
+//                uploadCurrentUserData();
             }
+
+            boolean first = true;
 
             @Override
             public void onLocationChanged(Location location) {
                 Log.d(TAG, "LocationChanged InitializeLocationEngine");
                 setCameraPosition(location);
+//                currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
+                latitude = String.valueOf(location.getLatitude());
+                longitude = String.valueOf(location.getLongitude());
+
+
+                Log.d(TAG, "Current location: " + latitude + " " + longitude);
+
+                if (latitude != null && longitude != null && first) {
+                    uploadCurrentUserData();
+                    first = false;
+                }
+
+                if (currentUserId != null) {
+
+                    /*
+                            Update current user's data in database
+                     */
+
+                    currentUser.setBus(currentBus);
+                    currentUser.setStatus(currentStatus);
+                    currentUser.setLatitude(latitude);
+                    currentUser.setLongitude(longitude);
+                    currentUser.setTimestamp(Timestamp.now());
+                    currentUser.setId(currentUserId);
+
+                    Log.d(TAG, "Current user updated data: " + currentUser.getId() + " " + currentUser.getBus() + " " + currentUser.getStatus() + " " + currentUser.getLatitude() + " " + currentUser.getLongitude());
+
+                    mFirestore.collection("users")
+                            .document(currentUser.getId())
+                            .set(currentUser)
+                            .addOnSuccessListener(aVoid ->
+                                    Log.d(TAG, "Current user's (" + currentUser.getId() + ") location data updated")
+                            );
+                }
+
             }
         };
 
         locationEngine = new LocationEngineProvider(this).obtainBestLocationEngineAvailable();
+//        locationEngine.setPriority(LocationEnginePriority.HIGH_ACCURACY);
+//        locationEngine.setPriority(LocationEnginePriority.BALANCED_POWER_ACCURACY);
         locationEngine.setPriority(LocationEnginePriority.HIGH_ACCURACY);
         locationEngine.setFastestInterval(5000);
+        locationEngine.setInterval(2000);
         locationEngine.setSmallestDisplacement(0);
+//        locationEngine.addLocationEngineListener(locationEngineListener);
         locationEngine.addLocationEngineListener(locationEngineListener);
+
+        //getLastLocation
 
         locationEngine.activate();
 
@@ -323,78 +411,93 @@ public class MainActivity extends AppCompatActivity
     private void setCameraPosition(Location location) {
         mapboxMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                 new LatLng(location.getLatitude(), location.getLongitude()), 13));
-//        mapboxMap.addMarker(new MarkerOptions()
-//                .position(new LatLng(location.getLatitude(), location.getLongitude()))
-//                .title("Current location")
-//                .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
-//        );
-        Log.d(TAG, "asdasdasd");
     }
 
     private void setStations() {
 
-        /**
-         *   Setting stations from database
-         *   and drawing them with markers on map
+        /*
+                Setting stations from database
+                and drawing them with markers on map
          */
 
         Log.d(TAG, "setStations function called");
 
-        mFirestore.collection("stations").addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                LatLng coordinates;
-                String latitude;
-                String longitude;
-                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-//                    Station station = new Station(
-//                            documentSnapshot.getString("latitude"),
-//                            documentSnapshot.getString("longitude"),
-//                            documentSnapshot.getString("name")
-//                    );
-                    latitude = documentSnapshot.getString("latitude");
-                    longitude = documentSnapshot.getString("longitude");
+        mFirestore.collection("stations").addSnapshotListener((queryDocumentSnapshots, e) -> {
 
-                    coordinates = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
+            LatLng coordinates;
+            String latitude;
+            String longitude;
 
-//                    Station station = new Station(coordinates, documentSnapshot.getString("name"));
-                    Station station = new Station(coordinates, documentSnapshot.getId());
+            assert queryDocumentSnapshots != null;
+            for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
 
-                    Log.d(TAG, "reading bus station data: " + station.getName() + " coordinates: " + station.getCoordinates());
+                latitude = documentSnapshot.getString("latitude");
+                longitude = documentSnapshot.getString("longitude");
 
-//                    mapboxMap.addMarker(new MarkerOptions()
-//                            .position(station.getCoordinates())
-////                            .title("Current location")
-//                    );
+                assert latitude != null;
+                assert longitude != null;
+                coordinates = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
 
-//                    double stationLat = Double.parseDouble(documentSnapshot.getString("latitude"));
-//                    double stationLng = Double.parseDouble(documentSnapshot.getString("longitude"));
-//                    LatLng stationLatLng = new LatLng(stationLat, stationLng);
+                Station station = new Station(coordinates, documentSnapshot.getId());
 
-//                    station.setCoordinates(stationLatLng);
+                Log.d(TAG, "reading bus station data: " + station.getName() + " coordinates: " + station.getCoordinates());
 
-                    busStations.add(station);
-                }
+                mapboxMap.addMarker(new MarkerOptions()
+                        .position(station.getCoordinates())
+                        .title(station.getName())
+                        .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
+                );
 
-                Log.d(TAG, "asdLOL");
+                busStations.add(station);
 
-                if (busStations.size() != 0) {
-
-                    for (Station station : busStations) {
-
-                        Log.d(TAG, "creating bus stations markers");
-
-                        mapboxMap.addMarker(new MarkerOptions()
-                                        .position(station.getCoordinates())
-                                        .title(station.getName())
-                                        .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
-                        );
-
-                        Log.d(TAG, "created bus stations marker");
-                    }
-                }
             }
         });
+    }
+
+    private void uploadCurrentUserData() {
+
+        /*
+                Upload first user data
+         */
+
+        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude);
+
+        mFirestore.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
+            Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
+            currentUserId = documentReference.getId();
+        }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
+    }
+
+    private void getUsersData() {
+
+        /*
+                Getting data from database
+                and drawing user on map with marker
+                if he/she is on bus.
+         */
+
+        Log.d(TAG, "Getting users...");
+
+        mFirestore.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
+            assert queryDocumentSnapshots != null;
+            for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
+                User newUser = new User(
+                        documentSnapshot.getId(),
+                        documentSnapshot.getString("bus"),
+                        documentSnapshot.getString("status"),
+                        documentSnapshot.getTimestamp("timestamp"),
+                        documentSnapshot.getString("latitude"),
+                        documentSnapshot.getString("longitude")
+                );
+
+                Log.d(TAG, "User data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
+
+                users.put(newUser, mapboxMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude()))))
+                );
+            }
+        });
+
     }
 }
 
