@@ -23,6 +23,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -108,6 +114,9 @@ public class MainActivity extends AppCompatActivity
     private LocationManager locationManager;
     private LocationListener locationListener;
 
+    private FusedLocationProviderClient mFusedLocationClient;
+    private LocationCallback mLocationCallback;
+
     @SuppressLint("LogNotTimber")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +146,9 @@ public class MainActivity extends AppCompatActivity
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+
 
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
@@ -156,6 +168,24 @@ public class MainActivity extends AppCompatActivity
             setStations();
             getUsersData();
         });
+
+
+
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    // Update UI with location data
+                    // ...
+                    Log.d(TAG, "doShit2: " + String.valueOf(location.getLatitude()) + " " + String.valueOf(location.getLongitude()));
+                }
+            }
+        };
+
+        doShit2();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -353,6 +383,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onLocationChanged(Location location) {
                 Log.d(TAG, "LocationChanged InitializeLocationEngine");
+                doShit();
                 setCameraPosition(location);
 //                currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
                 latitude = String.valueOf(location.getLatitude());
@@ -497,9 +528,30 @@ public class MainActivity extends AppCompatActivity
                 );
             }
         });
+    }
 
+    @SuppressLint("MissingPermission")
+    private void doShit() {
+        mFusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    // Got last known location. In some rare situations this can be null.
+                    if (location != null) {
+                        // Logic to handle location object
+                        Log.d(TAG, "doShit: " + String.valueOf(location.getLatitude()) + " " + String.valueOf(location.getLongitude()));
+                    }
+                });
+    }
+
+
+    @SuppressLint("MissingPermission")
+    protected void doShit2() {
+        LocationRequest mLocationRequest = LocationRequest.create();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(2000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        mFusedLocationClient.requestLocationUpdates(mLocationRequest,
+                mLocationCallback,
+                null /* Looper */);
     }
 }
-
-
-
