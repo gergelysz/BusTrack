@@ -24,6 +24,8 @@
     <string name="offline_bus_program">Offline bus program</string>
     <string name="change_status_and_or_bus">Change status and/or bus</string>
     <string name="set_up_route">Set up route</string>
+    <string name="please_choose_your_current_status">Please choose your current status:</string>
+    <string name="please_choose_your_current_bus">Please choose your current bus:</string>
     <string-array name="bus_numbers">
         <item>1</item>
         <item>2</item>

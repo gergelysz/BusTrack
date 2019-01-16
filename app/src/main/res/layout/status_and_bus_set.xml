@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/status_and_bus_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -15,9 +16,9 @@
             android:id="@+id/editText_sab_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Please choose your current status:"
-            android:textColor="@color/black"
-            android:textSize="20sp" />
+            android:text="@string/please_choose_your_current_status"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
 
         <RadioGroup
             android:id="@+id/radioGroup"
@@ -30,19 +31,17 @@
                 android:id="@+id/radioButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/black"
                 android:text="on bus"
-                android:textColor="@color/black"
-                android:textSize="16dp" />
+                android:textColor="@color/white"
+                android:textSize="12sp" />
 
             <RadioButton
                 android:id="@+id/radioButton2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/black"
                 android:text="waiting for bus"
-                android:textColor="@color/black"
-                android:textSize="16dp" />
+                android:textColor="@color/white"
+                android:textSize="12sp" />
 
         </RadioGroup>
 
@@ -52,9 +51,9 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/radioGroup"
             android:layout_marginTop="20dp"
-            android:text="Please choose your current bus:"
-            android:textColor="@color/black"
-            android:textSize="20sp" />
+            android:text="@string/please_choose_your_current_bus"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
 
         <Spinner
             android:id="@+id/spinner_statAndBus"
@@ -63,17 +62,19 @@
             android:layout_below="@id/editText_sab_selectBus"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
-            android:backgroundTint="@color/black"
-            android:popupBackground="@color/lighterdarkgray" />
+            android:backgroundTint="@color/white"
+            android:popupBackground="@color/white"
+            tools:targetApi="lollipop" />
 
         <Button
             android:id="@+id/button_apply_status_and_bus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="52dp"
+            android:layout_height="32dp"
             android:layout_below="@+id/spinner_statAndBus"
             android:layout_centerHorizontal="true"
-            android:background="@color/darkerdarkgray"
+            android:background="@color/darkergray"
             android:text="@string/apply"
+            android:textSize="12sp"
             android:textColor="@color/white" />
 
 

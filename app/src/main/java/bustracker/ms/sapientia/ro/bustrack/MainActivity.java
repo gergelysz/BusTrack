@@ -1,5 +1,6 @@
 package bustracker.ms.sapientia.ro.bustrack;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -35,6 +36,7 @@ import com.mapbox.android.core.location.LocationEnginePriority;
 import com.mapbox.android.core.location.LocationEngineProvider;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
@@ -65,7 +67,6 @@ import bustracker.ms.sapientia.ro.bustrack.Data.User;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import timber.log.Timber;
 
 @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 public class MainActivity extends AppCompatActivity
@@ -85,10 +86,14 @@ public class MainActivity extends AppCompatActivity
     private User currentUser = null;
 
     //private ArrayList<User> usersList = new ArrayList<>();
-    private ArrayList<Station> busStations = new ArrayList<>();
+//    private ArrayList<Station> busStations = new ArrayList<>();
     private ArrayList<Bus> listOfBuses = new ArrayList<>();
 
+    private Map<String, Bus> buses = new HashMap<>();
+
     private Map<String, Marker> usersMarkers = new HashMap<>();
+
+    private Map<String, LatLng> stations = new HashMap<>();
 
     private String latitude;
     private String longitude;
@@ -99,6 +104,7 @@ public class MainActivity extends AppCompatActivity
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
 
+    @SuppressLint("LogNotTimber")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -111,7 +117,7 @@ public class MainActivity extends AppCompatActivity
         Mapbox.getInstance(this, getString(R.string.access_token));
 
 
-        Timber.d("Mapbox set...");
+        Log.d(TAG, "Mapbox set...");
 
         /*
             This contains the MapView in XML and needs to be called after the access token is configured.
@@ -154,8 +160,8 @@ public class MainActivity extends AppCompatActivity
 //            Point origin = Point.fromLngLat(24.591303, 46.534301);
 //            Point destination = Point.fromLngLat(24.587011, 46.538928);
 
-            getRoute("26");
-            Timber.d("Route drawn");
+            getRouteForBus("26");
+            Log.d(TAG, "Route drawn");
         });
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -330,10 +336,11 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @SuppressLint("LogNotTimber")
     @SuppressWarnings("MissingPermission")
     private void initializeLocationEngine() {
 
-        Timber.d("initializing LocationEngine");
+        Log.d(TAG, "initializing LocationEngine");
 
         LocationEngineListener locationEngineListener = new LocationEngineListener() {
             @Override
@@ -345,7 +352,7 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onLocationChanged(Location location) {
-                Timber.d("Location changed(?), new location data: " + String.valueOf(location.getLatitude()) + " " + String.valueOf(location.getLongitude()));
+                Log.d(TAG, "Location changed(?), new location data: " + String.valueOf(location.getLatitude()) + " " + String.valueOf(location.getLongitude()));
 
                 setCameraPosition(location);
 
@@ -353,7 +360,7 @@ public class MainActivity extends AppCompatActivity
                 longitude = String.valueOf(location.getLongitude());
 
 
-                Timber.d("Current location: " + latitude + " " + longitude);
+                Log.d(TAG, "Current location: " + latitude + " " + longitude);
 
                 if (latitude != null && longitude != null && first) {
                     uploadCurrentUserData();
@@ -373,13 +380,13 @@ public class MainActivity extends AppCompatActivity
                     currentUser.setTimestamp(Timestamp.now());
                     currentUser.setId(currentUserId);
 
-                    Timber.d("Current user updated data: " + currentUser.getId() + " " + currentUser.getBus() + " " + currentUser.getStatus() + " " + currentUser.getLatitude() + " " + currentUser.getLongitude());
+                    Log.d(TAG, "Current user updated data: " + currentUser.getId() + " " + currentUser.getBus() + " " + currentUser.getStatus() + " " + currentUser.getLatitude() + " " + currentUser.getLongitude());
 
                     mFirestore.collection("users")
                             .document(currentUser.getId())
                             .set(currentUser)
                             .addOnSuccessListener(aVoid ->
-                                    Timber.d("Current user's (" + currentUser.getId() + ") location data updated")
+                                    Log.d(TAG, "Current user's (" + currentUser.getId() + ") location data updated")
                             );
                 }
 
@@ -403,6 +410,7 @@ public class MainActivity extends AppCompatActivity
                 new LatLng(location.getLatitude(), location.getLongitude()), 13));
     }
 
+    @SuppressLint("LogNotTimber")
     private void setStations() {
 
         /*
@@ -410,7 +418,7 @@ public class MainActivity extends AppCompatActivity
                 and drawing them with markers on map
          */
 
-        Timber.d("setStations function called");
+        Log.d(TAG, "setStations function called");
 
         mFirestore.collection("stations").get().addOnSuccessListener(queryDocumentSnapshots -> {
             LatLng coordinates;
@@ -429,7 +437,7 @@ public class MainActivity extends AppCompatActivity
 
                 Station station = new Station(coordinates, documentSnapshot.getId());
 
-                Timber.d("reading bus station data: " + station.getName() + " coordinates: " + station.getCoordinates());
+                Log.d(TAG, "reading bus station data: " + station.getName() + " coordinates: " + station.getCoordinates());
 
                 mapboxMap.addMarker(new MarkerOptions()
                         .position(station.getCoordinates())
@@ -437,12 +445,17 @@ public class MainActivity extends AppCompatActivity
                         .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
                 );
 
-                busStations.add(station);
+                stations.put(documentSnapshot.getId(), coordinates);
+
+//                busStations.add(station);
+
+                Log.d(TAG, "station: " + station.getName() + " " + station.getCoordinates());
 
             }
-        }).addOnFailureListener(e -> Timber.d("Couldn't get stations data from database!"));
+        }).addOnFailureListener(e -> Log.d(TAG, "Couldn't get stations data from database!"));
     }
 
+    @SuppressLint("LogNotTimber")
     private void uploadCurrentUserData() {
 
         /*
@@ -452,11 +465,12 @@ public class MainActivity extends AppCompatActivity
         currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude);
 
         mFirestore.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
-            Timber.d("%s%s", getString(R.string.user_data_upload_success), documentReference.getId());
+            Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
             currentUserId = documentReference.getId();
-        }).addOnFailureListener(e -> Timber.d("%s%s", getString(R.string.user_data_upload_fail_details), e.getMessage()));
+        }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
     }
 
+    @SuppressLint("LogNotTimber")
     private void getUsersData() {
 
         /*
@@ -465,7 +479,7 @@ public class MainActivity extends AppCompatActivity
                 if he/she is on bus.
          */
 
-        Timber.d("Getting users...");
+        Log.d(TAG, "Getting users...");
 
         mFirestore.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
             assert queryDocumentSnapshots != null;
@@ -479,7 +493,7 @@ public class MainActivity extends AppCompatActivity
                             documentSnapshot.getString("latitude"),
                             documentSnapshot.getString("longitude")
                     );
-                    Timber.d("New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
+                    Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
                     usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
                             .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))));
                 } else {
@@ -492,60 +506,59 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private void getRoute(String busNumber) {
+    @SuppressLint("LogNotTimber")
+    private void getRouteForBus(String busNumber) {
 
-        Double latOrigin = (double) 0;
-        Double lonOrigin = (double) 0;
-        Double latDest = (double) 0;
-        Double lonDest = (double) 0;
+        double latOrigin = 0;
+        double lonOrigin = 0;
+        double latDest = 0;
+        double lonDest = 0;
 
-        for (Station station : busStations) {
-            for (Bus bus : listOfBuses) {
-                if (bus.getFirstStationName().equals(station.getName())) {
-                    latOrigin = station.getCoordinates().getLatitude();
-                    lonOrigin = station.getCoordinates().getLongitude();
-                } else if (bus.getLastStationName().equals(station.getName())) {
-                    latDest = station.getCoordinates().getLatitude();
-                    lonDest = station.getCoordinates().getLongitude();
-                }
-            }
-        }
-
-        assert Mapbox.getAccessToken() != null;
-//        NavigationRoute.Builder navigationRoute = NavigationRoute.builder(this);
-        NavigationRoute.builder(this)
-//        navigationRoute
-                .accessToken(Mapbox.getAccessToken())
-                .origin(Point.fromLngLat(lonOrigin, latOrigin))
-                .destination(Point.fromLngLat(lonDest, latDest))
-
-                // Add waypoints
-
-//        for (String stationForBus : listOfBuses.get(0).getStations().subList(1, 11)) {
-//            for (Station station : busStations) {
-//                if (station.getName().equals(stationForBus)) {
-//                    Double lat = station.getCoordinates().getLatitude();
-//                    Double lon = station.getCoordinates().getLongitude();
-//                    NavigationRoute.addWaypoint(Point.fromLngLat(lon, lat));
-//                    NavigationRoute.builder().addWaypoint()
-//                    Timber.d("Waypoint added! Station (" + station.getName() + "), coordinates (" + station.getCoordinates() + ")");
+//        for (Station station : stations.keySet()) {
+//            for (Bus bus : listOfBuses) {
+//                if (bus.getFirstStationName().equals(station.getName())) {
+//                    latOrigin = station.getCoordinates().getLatitude();
+//                    lonOrigin = station.getCoordinates().getLongitude();
+//                } else if (bus.getLastStationName().equals(station.getName())) {
+//                    latDest = station.getCoordinates().getLatitude();
+//                    lonDest = station.getCoordinates().getLongitude();
 //                }
 //            }
 //        }
 
-//        navigationRoute.build()
-                .build()
+        String stationOrigin = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
+        String stationDest = Objects.requireNonNull(buses.get(busNumber)).getLastStationName();
+
+        assert Mapbox.getAccessToken() != null;
+        NavigationRoute.Builder builder = NavigationRoute.builder(this)
+                .accessToken(Mapbox.getAccessToken())
+                .origin(Point.fromLngLat(stations.get(stationOrigin).getLongitude(), stations.get(stationOrigin).getLatitude()))
+                .destination(Point.fromLngLat(stations.get(stationDest).getLongitude(), stations.get(stationDest).getLatitude()))
+                .profile(DirectionsCriteria.PROFILE_DRIVING);
+
+//        for (Point waypoint : waypoints) {
+//            builder.addWaypoint(waypoint);
+//        }
+
+        for (String stationName : buses.get(busNumber).getStations().subList(1, 10)) {
+            if (stations.keySet().contains(stationName)) {
+                Point waypoint = Point.fromLngLat(stations.get(stationName).getLongitude(), stations.get(stationName).getLatitude());
+                builder.addWaypoint(waypoint);
+            }
+        }
+
+        builder.build()
                 .getRoute(new Callback<DirectionsResponse>() {
                     @Override
                     public void onResponse(@NonNull Call<DirectionsResponse> call, @NonNull Response<DirectionsResponse> response) {
                         // You can get the generic HTTP info about the response
                         // 200 = SUCCESS
-                        Timber.d("Response code: %s", response.code());
+                        Log.d(TAG, "Response code: " + response.code());
                         if (response.body() == null) {
-                            Timber.e("No routes found, make sure you set the right user and access token.");
+                            Log.e(TAG, "No routes found, make sure you set the right user and access token.");
                             return;
                         } else if (response.body().routes().size() < 1) {
-                            Timber.e(getString(R.string.no_routes_found));
+                            Log.e(TAG, getString(R.string.no_routes_found));
                             return;
                         }
 
@@ -556,17 +569,75 @@ public class MainActivity extends AppCompatActivity
                             navigationMapRoute.removeRoute();
                         } else {
                             navigationMapRoute = new NavigationMapRoute(null, mapView, mapboxMap, R.style.NavigationMapRoute);
-                            Timber.d(getString(R.string.route_configured));
+                            Log.d(TAG, getString(R.string.route_configured));
                         }
                         navigationMapRoute.addRoute(currentRoute);
-                        Timber.d(getString(R.string.route_added));
+                        Log.d(TAG, getString(R.string.route_added));
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<DirectionsResponse> call, @NonNull Throwable throwable) {
-                        Timber.e("Error: %s", throwable.getMessage());
+                        Log.e(TAG, "Error: " + throwable.getMessage());
                     }
                 });
+
+
+//        assert Mapbox.getAccessToken() != null;
+////        NavigationRoute.Builder navigationRoute = NavigationRoute.builder(this);
+//        NavigationRoute.builder(this)
+////        navigationRoute
+//                .accessToken(Mapbox.getAccessToken())
+//                .origin(Point.fromLngLat(lonOrigin, latOrigin))
+//                .destination(Point.fromLngLat(lonDest, latDest))
+//
+//                // Add waypoints
+//
+////        for (String stationForBus : listOfBuses.get(0).getStations().subList(1, 11)) {
+////            for (Station station : busStations) {
+////                if (station.getName().equals(stationForBus)) {
+////                    Double lat = station.getCoordinates().getLatitude();
+////                    Double lon = station.getCoordinates().getLongitude();
+////                    NavigationRoute.addWaypoint(Point.fromLngLat(lon, lat));
+////                    NavigationRoute.builder().addWaypoint()
+////                    Timber.d("Waypoint added! Station (" + station.getName() + "), coordinates (" + station.getCoordinates() + ")");
+////                }
+////            }
+////        }
+//
+////        navigationRoute.build()
+//                .build()
+//                .getRoute(new Callback<DirectionsResponse>() {
+//                    @Override
+//                    public void onResponse(@NonNull Call<DirectionsResponse> call, @NonNull Response<DirectionsResponse> response) {
+//                        // You can get the generic HTTP info about the response
+//                        // 200 = SUCCESS
+//                        Log.d(TAG, "Response code: " + response.code());
+//                        if (response.body() == null) {
+//                            Log.e(TAG, "No routes found, make sure you set the right user and access token.");
+//                            return;
+//                        } else if (response.body().routes().size() < 1) {
+//                            Log.e(TAG, getString(R.string.no_routes_found));
+//                            return;
+//                        }
+//
+//                        currentRoute = response.body().routes().get(0);
+//
+//                        // Draw the route on the map
+//                        if (navigationMapRoute != null) {
+//                            navigationMapRoute.removeRoute();
+//                        } else {
+//                            navigationMapRoute = new NavigationMapRoute(null, mapView, mapboxMap, R.style.NavigationMapRoute);
+//                            Log.d(TAG, getString(R.string.route_configured));
+//                        }
+//                        navigationMapRoute.addRoute(currentRoute);
+//                        Log.d(TAG, getString(R.string.route_added));
+//                    }
+//
+//                    @Override
+//                    public void onFailure(@NonNull Call<DirectionsResponse> call, @NonNull Throwable throwable) {
+//                        Log.e(TAG, "Error: " + throwable.getMessage());
+//                    }
+//                });
     }
 
     /*
@@ -626,6 +697,7 @@ public class MainActivity extends AppCompatActivity
         dialog.show();
     }
 
+    @SuppressLint("LogNotTimber")
     private void getBusesDataFromDatabase() {
 
         mFirestore.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
@@ -653,8 +725,9 @@ public class MainActivity extends AppCompatActivity
                     Log.d(TAG, "lastStationLeavingTime: " + stationName);
                 }
 
-                listOfBuses.add(bus);
+//                listOfBuses.add(bus);
 
+                buses.put(bus.getNumber(), bus);
             }
         });
     }
