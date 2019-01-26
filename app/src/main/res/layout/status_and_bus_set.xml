@@ -16,6 +16,7 @@
             android:id="@+id/editText_sab_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/modernsans"
             android:text="@string/please_choose_your_current_status"
             android:textColor="@color/white"
             android:textSize="16sp" />
@@ -31,7 +32,8 @@
                 android:id="@+id/radioButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="on bus"
+                android:fontFamily="@font/modernsans"
+                android:text="@string/on_bus"
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
@@ -39,7 +41,8 @@
                 android:id="@+id/radioButton2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="waiting for bus"
+                android:fontFamily="@font/modernsans"
+                android:text="@string/waiting_for_bus"
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
@@ -51,6 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/radioGroup"
             android:layout_marginTop="20dp"
+            android:fontFamily="@font/modernsans"
             android:text="@string/please_choose_your_current_bus"
             android:textColor="@color/white"
             android:textSize="16sp" />
@@ -63,6 +67,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
             android:backgroundTint="@color/white"
+            android:fontFamily="@font/modernsans"
             android:popupBackground="@color/white"
             tools:targetApi="lollipop" />
 
@@ -73,9 +78,10 @@
             android:layout_below="@+id/spinner_statAndBus"
             android:layout_centerHorizontal="true"
             android:background="@color/darkergray"
+            android:fontFamily="@font/modernsans"
             android:text="@string/apply"
-            android:textSize="12sp"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textSize="12sp" />
 
 
     </RelativeLayout>

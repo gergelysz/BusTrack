@@ -32,6 +32,7 @@
         app:borderWidth="0dp"
         android:backgroundTintMode="multiply"
         android:backgroundTint="@color/black"
-        android:outlineProvider="none"/>
+        android:outlineProvider="none"
+        tools:targetApi="lollipop" />
 
 </android.support.design.widget.CoordinatorLayout>

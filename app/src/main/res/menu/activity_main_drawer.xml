@@ -20,6 +20,11 @@
             android:id="@+id/nav_setup_route"
             android:icon="@drawable/ic_setup_route"
             android:title="@string/set_up_route" />
+
+        <item
+            android:id="@+id/nav_update_busStations"
+            android:icon="@drawable/ic_update"
+            android:title="@string/update_data" />
     </group>
 
     <item android:title="Communicate">
