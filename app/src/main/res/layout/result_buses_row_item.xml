@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/darkerdarkgray"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/textView_result_bus_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="26"
+        android:textColor="@color/white"
+        android:textSize="64sp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:fontFamily="@font/modernsans"
+        tools:ignore="HardcodedText"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+        android:id="@+id/textView_result_bus_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Realtime bus not found!"
+        android:fontFamily="@font/modernsans"
+        app:layout_constraintBottom_toTopOf="@id/textView_result_bus_comesIn"
+        android:paddingStart="16dp"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        app:layout_constraintLeft_toRightOf="@id/textView_result_bus_number"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="HardcodedText,RtlSymmetry" />
+
+    <TextView
+        android:id="@+id/textView_result_bus_comesIn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Comes in 10 minutes."
+        android:fontFamily="@font/modernsans"
+        android:textColor="@color/white"
+        android:paddingStart="20dp"
+        android:textSize="16sp"
+        app:layout_constraintLeft_toRightOf="@id/textView_result_bus_number"
+        app:layout_constraintTop_toBottomOf="@id/textView_result_bus_info"
+        tools:ignore="HardcodedText"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+</android.support.constraint.ConstraintLayout>

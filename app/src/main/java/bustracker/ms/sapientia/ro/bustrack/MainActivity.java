@@ -22,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -55,6 +56,8 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
+import org.w3c.dom.Text;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -65,7 +68,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import bustracker.ms.sapientia.ro.bustrack.Adapter.ListedBusAdapter;
 import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
+import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.Station;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
 import retrofit2.Call;
@@ -159,9 +164,9 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = findViewById(R.id.nav_view);
 
         /*
-         *   headerView to get the TextViews from
-         *   the navigation bar to use setText()
-         *   at showing current status, ID, speed and closest station.
+            headerView to get the TextViews from
+            the navigation bar to use setText()
+            at showing current status, ID, speed and closest station.
          */
 
         View headerView = navigationView.getHeaderView(0);
@@ -454,8 +459,9 @@ public class MainActivity extends AppCompatActivity
                         distanceToClosestStation = location.distanceTo(locationStation);
                         closestStationName = entry.getKey();
                     }
-                    Log.d(TAG, "closest station: " + closestStationName + " distance: " + distanceToClosestStation);
                 }
+
+                Log.d(TAG, "closest station: " + closestStationName + " distance: " + distanceToClosestStation);
 
                 closestStationTextView.setText(getResources().getString(R.string.closest_station) + " " + closestStationName);
                 speedTextView.setText(getResources().getString(R.string.current_speed) + " " + location.getSpeed());
@@ -775,6 +781,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -798,19 +805,48 @@ public class MainActivity extends AppCompatActivity
 
         buttonSelectedRouteApply.setOnClickListener(v -> {
             selectedStation = spinner.getSelectedItem().toString();
-            dialog.cancel();
+
+            // NEW
+
+            ArrayList<Bus> resultBuses = new ArrayList<>();
+
+            if (!selectedStation.isEmpty()) {
+                for (Bus bus : buses.values()) {
+                    if (bus.getStations().contains(selectedStation)) {
+                        resultBuses.add(bus);
+                    }
+                }
+                Log.d(TAG, "number of resultBuses: " + resultBuses.size());
+            }
+
+            dialog.setContentView(R.layout.result_buses);
+            dialog.setCancelable(true);
+            ArrayList<ListedBusData> listedBusData = new ArrayList<>();
+
+            TextView textViewHeadingTo = dialog.findViewById(R.id.editText_result_title);
+            textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to) + " " + selectedStation);
+
+            // TODO
+            String comesIn = "10";
+            String realTimeBusData = "Realtime bus not found! xd";
+
+            listedBusData.clear();
+
+            for (Bus bus : resultBuses) {
+                ListedBusData listedBusData1 = new ListedBusData(bus.getNumber(), realTimeBusData, comesIn);
+                listedBusData.add(listedBusData1);
+            }
+
+            ListView listView;
+
+            listView = dialog.findViewById(R.id.listView_result_buses);
+
+            ListedBusAdapter listedBusAdapter = new ListedBusAdapter(this, listedBusData);
+            listView.setAdapter(listedBusAdapter);
+            listedBusAdapter.addAll(listedBusData);
+
         });
 
         dialog.show();
-
-        ArrayList<Bus> resultBuses = new ArrayList<>();
-
-        if(!selectedStation.isEmpty()) {
-            for(Bus bus: buses.values()) {
-                if(bus.getStations().contains(selectedStation)) {
-                    resultBuses.add(bus);
-                }
-            }
-        }
     }
 }
