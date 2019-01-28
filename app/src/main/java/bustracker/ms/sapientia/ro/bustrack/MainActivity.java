@@ -269,6 +269,7 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "Route drawn");
         } else if (id == R.id.nav_update_busStations) {
             setStations();
+            saveStationsOffline();
         } else if (id == R.id.nav_share) {
 
         } else if (id == R.id.nav_send) {
@@ -611,13 +612,13 @@ public class MainActivity extends AppCompatActivity
         assert Mapbox.getAccessToken() != null;
         NavigationRoute.Builder builder = NavigationRoute.builder(this)
                 .accessToken(Mapbox.getAccessToken())
-                .origin(Point.fromLngLat(Objects.requireNonNull(stations.get(stationOrigin)).getLongitude(), stations.get(stationOrigin).getLatitude()))
-                .destination(Point.fromLngLat(Objects.requireNonNull(stations.get(stationDest)).getLongitude(), stations.get(stationDest).getLatitude()))
+                .origin(Point.fromLngLat(Objects.requireNonNull(stations.get(stationOrigin)).getLongitude(), Objects.requireNonNull(stations.get(stationOrigin)).getLatitude()))
+                .destination(Point.fromLngLat(Objects.requireNonNull(stations.get(stationDest)).getLongitude(), Objects.requireNonNull(stations.get(stationDest)).getLatitude()))
                 .profile(DirectionsCriteria.PROFILE_DRIVING);
 
         for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStations().subList(1, 10)) {
             if (stations.keySet().contains(stationName)) {
-                Point waypoint = Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), stations.get(stationName).getLatitude());
+                Point waypoint = Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude());
                 builder.addWaypoint(waypoint);
             }
         }
@@ -792,8 +793,6 @@ public class MainActivity extends AppCompatActivity
 
         final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectStation);
 
-//        spinner.setVisibility(View.INVISIBLE);
-
         List<String> stationsList = new ArrayList<>(stations.keySet());
         Collections.sort(stationsList);
 
@@ -843,8 +842,6 @@ public class MainActivity extends AppCompatActivity
 
             ListedBusAdapter listedBusAdapter = new ListedBusAdapter(this, listedBusData);
             listView.setAdapter(listedBusAdapter);
-            listedBusAdapter.addAll(listedBusData);
-
         });
 
         dialog.show();

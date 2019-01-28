@@ -1,19 +1,17 @@
 package bustracker.ms.sapientia.ro.bustrack.Adapter;
 
 import android.content.Context;
-import android.support.constraint.ConstraintLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
-import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
+import java.util.ArrayList;
+
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
-import bustracker.ms.sapientia.ro.bustrack.MainActivity;
 import bustracker.ms.sapientia.ro.bustrack.R;
 
 public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
@@ -23,7 +21,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
     }
 
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, @NotNull ViewGroup parent) {
         // Get the data item for this position
         ListedBusData listedBusData = getItem(position);
         // Check if an existing view is being reused, otherwise inflate the view
@@ -35,6 +33,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         TextView textViewRealTimeBusData = convertView.findViewById(R.id.textView_result_bus_info);
         TextView textViewBusComesIn = convertView.findViewById(R.id.textView_result_bus_comesIn);
         // Populate the data into the template view using the data object
+        assert listedBusData != null;
         textViewBusNumber.setText(listedBusData.getBusNumber());
         textViewRealTimeBusData.setText(listedBusData.getRealTimeBusData());
         textViewBusComesIn.setText(listedBusData.getComesInMinutes());
