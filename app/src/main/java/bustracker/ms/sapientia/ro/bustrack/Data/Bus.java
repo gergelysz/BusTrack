@@ -13,7 +13,6 @@ public class Bus extends User {
     private List<String> stations = new ArrayList<>();
     private List<String> firstStationLeavingTime = new ArrayList<>();
     private List<String> lastStationLeavingTime = new ArrayList<>();
-    //private Map<String, String> stationsData = new HashMap<>();
 
     public Bus() {
     }
@@ -65,12 +64,4 @@ public class Bus extends User {
     public void setLastStationLeavingTime(List<String> lastStationLeavingTime) {
         this.lastStationLeavingTime = lastStationLeavingTime;
     }
-
-//    public Map<String, String> getStationsData() {
-//        return stationsData;
-//    }
-//
-//    public void setStationsData(Map<String, String> stationsData) {
-//        this.stationsData = stationsData;
-//    }
 }

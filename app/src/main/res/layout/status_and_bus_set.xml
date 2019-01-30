@@ -10,7 +10,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:background="@drawable/popup_style_set"
-        android:padding="12dp">
+        android:padding="12dp"
+        tools:ignore="UselessParent">
 
         <TextView
             android:id="@+id/editText_sab_status"
@@ -83,7 +84,5 @@
             android:textColor="@color/white"
             android:textSize="12sp" />
 
-
     </RelativeLayout>
-
 </RelativeLayout>

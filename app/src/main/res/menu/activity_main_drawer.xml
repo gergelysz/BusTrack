@@ -19,7 +19,7 @@
         <item
             android:id="@+id/nav_setup_route"
             android:icon="@drawable/ic_setup_route"
-            android:title="@string/set_up_route" />
+            android:title="@string/show_route_for_bus" />
 
         <item
             android:id="@+id/nav_update_busStations"

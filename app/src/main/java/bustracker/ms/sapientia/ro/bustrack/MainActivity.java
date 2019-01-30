@@ -56,8 +56,6 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
-import org.w3c.dom.Text;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -164,9 +162,9 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = findViewById(R.id.nav_view);
 
         /*
-            headerView to get the TextViews from
-            the navigation bar to use setText()
-            at showing current status, ID, speed and closest station.
+                headerView to get the TextViews from
+                the navigation bar to use setText()
+                at showing current status, ID, speed and closest station.
          */
 
         View headerView = navigationView.getHeaderView(0);
@@ -185,15 +183,15 @@ public class MainActivity extends AppCompatActivity
             enableLocationComponent();
 
             /*
-                Get stations from database
-                coordinates and name
+                    Get stations from database
+                    coordinates and name
              */
 
             stations2 = loadStationsOffline();
 
             if (stations2 != null) {
                 stations = new HashMap<>();
-                Toast.makeText(this, "stations data found in file", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "stations data found in file", Toast.LENGTH_SHORT).show();
                 for (Map.Entry<String, String> entry : stations2.entrySet()) {
                     String key = entry.getKey();
                     String[] value = entry.getValue().split(",");
@@ -210,7 +208,7 @@ public class MainActivity extends AppCompatActivity
                 }
             } else {
                 stations2 = new HashMap<>();
-                Toast.makeText(this, "stations data not found in file", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "stations data not found in file", Toast.LENGTH_SHORT).show();
                 setStations();
             }
 
@@ -265,15 +263,37 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_change_statusAndBus) {
             statusAndBusSelectorLoader();
         } else if (id == R.id.nav_setup_route) {
-            getRouteForBus("26");
-            Log.d(TAG, "Route drawn");
+//            getRouteForBus("26");
+//            Log.d(TAG, "Route drawn");
+
+            Dialog dialog = new Dialog(MainActivity.this);
+            Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
+            dialog.setContentView(R.layout.bus_route);
+            dialog.setCancelable(true);
+
+            Button buttonSelectedBusRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
+
+            final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectBus);
+
+            List<String> stationsList = new ArrayList<>(stations.keySet());
+            Collections.sort(stationsList);
+
+            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
+                    R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
+//                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.bus_numbers));
+//        spinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
+            spinner.setAdapter(spinnerAdapter);
+
+            buttonSelectedBusRouteApply.setOnClickListener(v -> {
+                getRouteForBus(spinner.getSelectedItem().toString());
+                dialog.cancel();
+            });
+
+            dialog.show();
+
         } else if (id == R.id.nav_update_busStations) {
             setStations();
             saveStationsOffline();
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -363,7 +383,7 @@ public class MainActivity extends AppCompatActivity
 
             // Set the component's camera mode
             locationComponent.setCameraMode(CameraMode.TRACKING);
-            locationComponent.setRenderMode(RenderMode.COMPASS);
+            locationComponent.setRenderMode(RenderMode.NORMAL);
 
         } else {
             permissionsManager = new PermissionsManager(this);
@@ -471,8 +491,10 @@ public class MainActivity extends AppCompatActivity
         };
 
         locationEngine = new LocationEngineProvider(this).obtainBestLocationEngineAvailable();
-        locationEngine.setPriority(LocationEnginePriority.HIGH_ACCURACY);
-        locationEngine.setFastestInterval(5000);
+//        locationEngine.setPriority(LocationEnginePriority.HIGH_ACCURACY);
+        locationEngine.setPriority(LocationEnginePriority.BALANCED_POWER_ACCURACY);
+        locationEngine.setFastestInterval(1000);
+        locationEngine.setInterval(1000);
         locationEngine.setSmallestDisplacement(0);
         locationEngine.addLocationEngineListener(locationEngineListener);
 
@@ -482,7 +504,7 @@ public class MainActivity extends AppCompatActivity
 
     private void setCameraPosition(Location location) {
         mapboxMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                new LatLng(location.getLatitude(), location.getLongitude()), 13));
+                new LatLng(location.getLatitude(), location.getLongitude()), 16));
     }
 
     @SuppressLint("LogNotTimber")
@@ -594,18 +616,6 @@ public class MainActivity extends AppCompatActivity
     @SuppressLint("LogNotTimber")
     private void getRouteForBus(String busNumber) {
 
-//        for (Station station : stations.keySet()) {
-//            for (Bus bus : listOfBuses) {
-//                if (bus.getFirstStationName().equals(station.getName())) {
-//                    latOrigin = station.getCoordinates().getLatitude();
-//                    lonOrigin = station.getCoordinates().getLongitude();
-//                } else if (bus.getLastStationName().equals(station.getName())) {
-//                    latDest = station.getCoordinates().getLatitude();
-//                    lonDest = station.getCoordinates().getLongitude();
-//                }
-//            }
-//        }
-
         String stationOrigin = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
         String stationDest = Objects.requireNonNull(buses.get(busNumber)).getLastStationName();
 
@@ -642,7 +652,8 @@ public class MainActivity extends AppCompatActivity
 
                         // Draw the route on the map
                         if (navigationMapRoute != null) {
-                            navigationMapRoute.removeRoute();
+//                            navigationMapRoute.removeRoute();
+                            navigationMapRoute.updateRouteVisibilityTo(false);
                         } else {
                             navigationMapRoute = new NavigationMapRoute(null, mapView, mapboxMap, R.style.NavigationMapRoute);
                             Log.d(TAG, getString(R.string.route_configured));
@@ -726,11 +737,11 @@ public class MainActivity extends AppCompatActivity
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
 
-                Bus bus = documentSnapshot.toObject(Bus.class);
-
                 /*
-                            Testing toObject for buses
+                            Converting the data from Firestore to Bus object
                  */
+
+                Bus bus = documentSnapshot.toObject(Bus.class);
 
                 assert bus != null;
                 Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName());
@@ -755,20 +766,20 @@ public class MainActivity extends AppCompatActivity
     @SuppressLint("LogNotTimber")
     private void saveStationsOffline() {
         try {
-            //stations = new HashMap<>();
-
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(openFileOutput("stationsData2.dat", MODE_PRIVATE));
             objectOutputStream.writeObject(stations2);
             Log.d(TAG, "asdasdasdasd" + objectOutputStream.toString());
             Log.d(TAG, "asdasdasdasd" + stations2);
             objectOutputStream.close();
-            Toast.makeText(this, getString(R.string.stations_data_saved), Toast.LENGTH_SHORT).show();
+//            Toast.makeText(this, getString(R.string.stations_data_saved), Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, getString(R.string.stations_data_save_failed), Toast.LENGTH_SHORT).show();
+//            Toast.makeText(this, getString(R.string.stations_data_save_failed), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.couldnt_save_data_error) + " " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
+    @SuppressWarnings("unchecked")
     private HashMap<String, String> loadStationsOffline() {
         try {
             ObjectInputStream objectInputStream = new ObjectInputStream(openFileInput("stationsData2.dat"));

@@ -9,28 +9,11 @@ public class User {
     private String bus;
     private String status;
     private Timestamp timestamp;
-//    private LatLng coordinates;
     private String latitude;
     private String longitude;
 
     public User() {
     }
-
-//    public User(String id, String bus, String status, Timestamp timestamp, LatLng coordinates) {
-//        this.id = id;
-//        this.bus = bus;
-//        this.status = status;
-//        this.timestamp = timestamp;
-//        this.coordinates = coordinates;
-//    }
-//
-//    public User(String bus, String status, Timestamp timestamp, LatLng coordinates) {
-//        this.bus = bus;
-//        this.status = status;
-//        this.timestamp = timestamp;
-//        this.coordinates = coordinates;
-//    }
-
 
     public User(String bus, String status, Timestamp timestamp) {
         this.bus = bus;
@@ -102,12 +85,4 @@ public class User {
     public void setLongitude(String longitude) {
         this.longitude = longitude;
     }
-
-//    public LatLng getCoordinates() {
-//        return coordinates;
-//    }
-//
-//    public void setCoordinates(LatLng coordinates) {
-//        this.coordinates = coordinates;
-//    }
 }

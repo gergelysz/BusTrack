@@ -14,19 +14,19 @@
         tools:ignore="UselessParent">
 
         <TextView
-            android:id="@+id/editText_drawRoute_select_your_bus"
+            android:id="@+id/editText_drawRoute_select_bus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/select_the_station_where_you_want_to_go"
+            android:text="@string/select_the_bus_to_show_it_s_route"
             android:textColor="@color/white"
             android:fontFamily="@font/modernsans"
             android:textSize="16sp" />
 
         <Spinner
-            android:id="@+id/spinner_drawRoute_selectStation"
+            android:id="@+id/spinner_drawRoute_selectBus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/editText_drawRoute_select_your_bus"
+            android:layout_below="@id/editText_drawRoute_select_bus"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
             android:backgroundTint="@color/white"
@@ -37,7 +37,7 @@
             android:id="@+id/button_drawRoute_apply"
             android:layout_width="52dp"
             android:layout_height="32dp"
-            android:layout_below="@+id/spinner_drawRoute_selectStation"
+            android:layout_below="@id/spinner_drawRoute_selectBus"
             android:layout_centerHorizontal="true"
             android:background="@color/darkergray"
             android:text="@string/apply"
