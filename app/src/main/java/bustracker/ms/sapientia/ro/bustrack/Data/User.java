@@ -1,7 +1,6 @@
 package bustracker.ms.sapientia.ro.bustrack.Data;
 
 import com.google.firebase.Timestamp;
-import com.mapbox.mapboxsdk.geometry.LatLng;
 
 public class User {
 
@@ -12,7 +11,7 @@ public class User {
     private String latitude;
     private String longitude;
 
-    public User() {
+    User() {
     }
 
     public User(String bus, String status, Timestamp timestamp) {

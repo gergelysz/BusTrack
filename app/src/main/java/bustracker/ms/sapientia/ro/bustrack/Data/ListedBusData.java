@@ -2,9 +2,9 @@ package bustracker.ms.sapientia.ro.bustrack.Data;
 
 public class ListedBusData {
 
-    String busNumber;
-    String realTimeBusData;
-    String comesInMinutes;
+    private String busNumber;
+    private String realTimeBusData;
+    private String comesInMinutes;
 
     public ListedBusData(String busNumber, String realTimeBusData, String comesInMinutes) {
         this.busNumber = busNumber;

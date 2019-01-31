@@ -20,6 +20,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         super(context, 0, listedBuses);
     }
 
+    @NotNull
     @Override
     public View getView(int position, View convertView, @NotNull ViewGroup parent) {
 

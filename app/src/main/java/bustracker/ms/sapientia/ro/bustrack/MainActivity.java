@@ -92,9 +92,9 @@ public class MainActivity extends AppCompatActivity
 
     private User currentUser = null;
 
-    private Map<String, Bus> buses = new HashMap<>();
+    private final Map<String, Bus> buses = new HashMap<>();
 
-    private Map<String, Marker> usersMarkers = new HashMap<>();
+    private final Map<String, Marker> usersMarkers = new HashMap<>();
 
     private Map<String, LatLng> stations = null;
     private Map<String, String> stations2 = null;
@@ -263,8 +263,6 @@ public class MainActivity extends AppCompatActivity
         } else if (id == R.id.nav_change_statusAndBus) {
             statusAndBusSelectorLoader();
         } else if (id == R.id.nav_setup_route) {
-//            getRouteForBus("26");
-//            Log.d(TAG, "Route drawn");
 
             Dialog dialog = new Dialog(MainActivity.this);
             Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -280,8 +278,6 @@ public class MainActivity extends AppCompatActivity
 
             ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                     R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
-//                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.bus_numbers));
-//        spinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
             spinner.setAdapter(spinnerAdapter);
 
             buttonSelectedBusRouteApply.setOnClickListener(v -> {
@@ -518,6 +514,7 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "setStations function called");
 
         mFirestore.collection("stations").get().addOnSuccessListener(queryDocumentSnapshots -> {
+
             LatLng coordinates;
             String latitude;
             String longitude;
@@ -550,9 +547,6 @@ public class MainActivity extends AppCompatActivity
 
                 stations.put(documentSnapshot.getId(), coordinates);
                 stations2.put(documentSnapshot.getId(), loc);
-
-
-//                busStations.add(station);
 
                 Log.d(TAG, "station: " + station.getName() + " " + station.getCoordinates());
 
@@ -707,8 +701,6 @@ public class MainActivity extends AppCompatActivity
 
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
-//                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.bus_numbers));
-//        spinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
         spinner.setAdapter(spinnerAdapter);
 
         applyButton.setOnClickListener(v -> {
@@ -809,8 +801,6 @@ public class MainActivity extends AppCompatActivity
 
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, stationsList);
-//                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.bus_numbers));
-//        spinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
         spinner.setAdapter(spinnerAdapter);
 
         buttonSelectedRouteApply.setOnClickListener(v -> {
@@ -843,8 +833,7 @@ public class MainActivity extends AppCompatActivity
             listedBusData.clear();
 
             for (Bus bus : resultBuses) {
-                ListedBusData listedBusData1 = new ListedBusData(bus.getNumber(), realTimeBusData, comesIn);
-                listedBusData.add(listedBusData1);
+                listedBusData.add(new ListedBusData(bus.getNumber(), realTimeBusData, comesIn));
             }
 
             ListView listView;
