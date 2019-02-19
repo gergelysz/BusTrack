@@ -33,11 +33,38 @@
             android:popupBackground="@color/white"
             tools:targetApi="lollipop" />
 
+        <RadioGroup
+            android:id="@+id/radioGroupRouting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/spinner_drawRoute_selectBus"
+            android:layout_marginTop="8dp">
+
+            <RadioButton
+                android:id="@+id/radioButtonRouting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/modernsans"
+                android:text="@string/firststation"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+
+            <RadioButton
+                android:id="@+id/radioButtonRouting2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/modernsans"
+                android:text="@string/laststation"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+
+        </RadioGroup>
+
         <Button
             android:id="@+id/button_drawRoute_apply"
             android:layout_width="52dp"
             android:layout_height="32dp"
-            android:layout_below="@id/spinner_drawRoute_selectBus"
+            android:layout_below="@id/radioGroupRouting"
             android:layout_centerHorizontal="true"
             android:background="@color/darkergray"
             android:text="@string/apply"

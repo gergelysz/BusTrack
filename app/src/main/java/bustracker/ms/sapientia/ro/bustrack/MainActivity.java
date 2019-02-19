@@ -20,6 +20,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -187,9 +188,11 @@ public class MainActivity extends AppCompatActivity
                     coordinates and name
              */
 
+            stations2 = new HashMap<>();
             stations2 = loadStationsOffline();
 
-            if (stations2 != null) {
+//            if (stations2 != null) {
+            if (!stations2.isEmpty()) {
                 stations = new HashMap<>();
 //                Toast.makeText(this, "stations data found in file", Toast.LENGTH_SHORT).show();
                 for (Map.Entry<String, String> entry : stations2.entrySet()) {
@@ -208,6 +211,7 @@ public class MainActivity extends AppCompatActivity
                 }
             } else {
                 stations2 = new HashMap<>();
+                stations = new HashMap<>();
 //                Toast.makeText(this, "stations data not found in file", Toast.LENGTH_SHORT).show();
                 setStations();
             }
@@ -257,11 +261,17 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_select_station) {
+
             selectedStationRouting();
+
         } else if (id == R.id.nav_offline_bus_data) {
+
             saveStationsOffline();
+
         } else if (id == R.id.nav_change_statusAndBus) {
+
             statusAndBusSelectorLoader();
+
         } else if (id == R.id.nav_setup_route) {
 
             Dialog dialog = new Dialog(MainActivity.this);
@@ -269,7 +279,16 @@ public class MainActivity extends AppCompatActivity
             dialog.setContentView(R.layout.bus_route);
             dialog.setCancelable(true);
 
+            RadioButton firstStation, lastStation;
+            firstStation = dialog.findViewById(R.id.radioButtonRouting);
+            lastStation = dialog.findViewById(R.id.radioButtonRouting2);
+
+            firstStation.setVisibility(View.INVISIBLE);
+            lastStation.setVisibility(View.INVISIBLE);
+
             Button buttonSelectedBusRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
+
+            buttonSelectedBusRouteApply.setClickable(false);
 
             final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectBus);
 
@@ -280,16 +299,57 @@ public class MainActivity extends AppCompatActivity
                     R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
             spinner.setAdapter(spinnerAdapter);
 
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @SuppressLint("SetTextI18n")
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                    String selection = spinner.getSelectedItem().toString();
+
+                    for (Map.Entry<String, Bus> bus : buses.entrySet()) {
+                        if (selection.equals(bus.getKey())) {
+
+                            firstStation.setVisibility(View.VISIBLE);
+                            lastStation.setVisibility(View.VISIBLE);
+
+                            firstStation.setText(bus.getValue().getFirstStationName() + " -> " + bus.getValue().getLastStationName());
+                            lastStation.setText(bus.getValue().getLastStationName() + " -> " + bus.getValue().getFirstStationName());
+                        }
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+
+                }
+            });
+
+            firstStation.setOnClickListener(v -> buttonSelectedBusRouteApply.setClickable(true));
+            lastStation.setOnClickListener(v -> buttonSelectedBusRouteApply.setClickable(true));
+
             buttonSelectedBusRouteApply.setOnClickListener(v -> {
-                getRouteForBus(spinner.getSelectedItem().toString());
+
+                if (firstStation.isSelected()) {
+//                    getRouteForBus(spinner.getSelectedItem().toString(), firstStation.getText().toString().substring(0, firstStation.getText().toString().indexOf("->") - 1));
+                    getRouteForBus(spinner.getSelectedItem().toString(), buses.get(spinner.getSelectedItem().toString()).getStationsFromFirstStation(), buses.get(spinner.getSelectedItem().toString()).getFirstStationName(), buses.get(spinner.getSelectedItem().toString()).getLastStationName());
+                } else {
+//                    getRouteForBus(spinner.getSelectedItem().toString(), lastStation.getText().toString().substring(0, lastStation.getText().toString().indexOf("->") - 1));
+                    getRouteForBus(spinner.getSelectedItem().toString(), buses.get(spinner.getSelectedItem().toString()).getStationsFromLastStation(), buses.get(spinner.getSelectedItem().toString()).getLastStationName(), buses.get(spinner.getSelectedItem().toString()).getFirstStationName());
+                }
+
                 dialog.cancel();
             });
 
             dialog.show();
 
         } else if (id == R.id.nav_update_busStations) {
+
+            Log.d(TAG, "setStations before");
             setStations();
+            Log.d(TAG, "setStations after");
+            Log.d(TAG, "saveStationsOffline before");
             saveStationsOffline();
+            Log.d(TAG, "saveStationsOffline after");
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -421,7 +481,7 @@ public class MainActivity extends AppCompatActivity
             public void onLocationChanged(Location location) {
                 Log.d(TAG, "Location changed(?), new location data: " + String.valueOf(location.getLatitude()) + " " + String.valueOf(location.getLongitude()));
 
-                setCameraPosition(location);
+//                setCameraPosition(location);
 
                 latitude = String.valueOf(location.getLatitude());
                 longitude = String.valueOf(location.getLongitude());
@@ -608,10 +668,16 @@ public class MainActivity extends AppCompatActivity
     }
 
     @SuppressLint("LogNotTimber")
-    private void getRouteForBus(String busNumber) {
+//    private void getRouteForBus(String busNumber, String stationOrigin) {
+    private void getRouteForBus(String busNumber, List<String> stationsWaypointList, String stationOrigin, String stationDest) {
 
-        String stationOrigin = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
-        String stationDest = Objects.requireNonNull(buses.get(busNumber)).getLastStationName();
+//        String stationOrigin = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
+//        boolean matchFirstStation = true;
+////        String stationDest = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
+//        if (stationOrigin.equals(stationDest)) {
+//            stationDest = Objects.requireNonNull(buses.get(busNumber)).getLastStationName();
+//            matchFirstStation = false;
+//        }
 
         assert Mapbox.getAccessToken() != null;
         NavigationRoute.Builder builder = NavigationRoute.builder(this)
@@ -620,12 +686,52 @@ public class MainActivity extends AppCompatActivity
                 .destination(Point.fromLngLat(Objects.requireNonNull(stations.get(stationDest)).getLongitude(), Objects.requireNonNull(stations.get(stationDest)).getLatitude()))
                 .profile(DirectionsCriteria.PROFILE_DRIVING);
 
-        for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStations().subList(1, 10)) {
+        // TODO
+
+//        if(matchFirstStation) {
+//            for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStationsFromFirstStation()) {
+//                if (stations.keySet().contains(stationName)) {
+//                    builder.addWaypoint(Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude()));
+//                }
+//            }
+//        } else {
+//            for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStationsFromLastStation()) {
+//                if (stations.keySet().contains(stationName)) {
+//                    builder.addWaypoint(Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude()));
+//                }
+//            }
+//        }
+
+        for (String stationName : stationsWaypointList) {
             if (stations.keySet().contains(stationName)) {
-                Point waypoint = Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude());
-                builder.addWaypoint(waypoint);
+                builder.addWaypoint(Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude()));
             }
         }
+
+////        for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStations().subList(1, 10)) {
+//        for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStations().subList(1, 10)) {
+//            if (stations.keySet().contains(stationName)) {
+////                Point waypoint = Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude());
+//                builder.addWaypoint(Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude()));
+//            }
+//        }
+
+//        String stationOrigin = Objects.requireNonNull(buses.get(busNumber)).getFirstStationName();
+//        String stationDest = Objects.requireNonNull(buses.get(busNumber)).getLastStationName();
+//
+//        assert Mapbox.getAccessToken() != null;
+//        NavigationRoute.Builder builder = NavigationRoute.builder(this)
+//                .accessToken(Mapbox.getAccessToken())
+//                .origin(Point.fromLngLat(Objects.requireNonNull(stations.get(stationOrigin)).getLongitude(), Objects.requireNonNull(stations.get(stationOrigin)).getLatitude()))
+//                .destination(Point.fromLngLat(Objects.requireNonNull(stations.get(stationDest)).getLongitude(), Objects.requireNonNull(stations.get(stationDest)).getLatitude()))
+//                .profile(DirectionsCriteria.PROFILE_DRIVING);
+//
+//        for (String stationName : Objects.requireNonNull(buses.get(busNumber)).getStations().subList(1, 10)) {
+//            if (stations.keySet().contains(stationName)) {
+////                Point waypoint = Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude());
+//                builder.addWaypoint(Point.fromLngLat(Objects.requireNonNull(stations.get(stationName)).getLongitude(), Objects.requireNonNull(stations.get(stationName)).getLatitude()));
+//            }
+//        }
 
         builder.build()
                 .getRoute(new Callback<DirectionsResponse>() {
@@ -738,12 +844,16 @@ public class MainActivity extends AppCompatActivity
                 assert bus != null;
                 Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName());
 
-                for (String stationName : bus.getStations()) {
-                    Log.d(TAG, "stationName: " + stationName);
+//                for (String stationName : bus.getStations()) {
+//                    Log.d(TAG, "stationName: " + stationName);
+//                }
+
+                for (String stationName : bus.getStationsFromFirstStation()) {
+                    Log.d(TAG, "getStationsFromFirstStation: " + stationName);
                 }
 
-                for (String stationName : bus.getFirstStationLeavingTime()) {
-                    Log.d(TAG, "firstStationLeavingTime: " + stationName);
+                for (String stationName : bus.getStationsFromLastStation()) {
+                    Log.d(TAG, "getStationsFromLastStation: " + stationName);
                 }
 
                 for (String stationName : bus.getLastStationLeavingTime()) {
@@ -763,10 +873,8 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "asdasdasdasd" + objectOutputStream.toString());
             Log.d(TAG, "asdasdasdasd" + stations2);
             objectOutputStream.close();
-//            Toast.makeText(this, getString(R.string.stations_data_saved), Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             e.printStackTrace();
-//            Toast.makeText(this, getString(R.string.stations_data_save_failed), Toast.LENGTH_SHORT).show();
             Toast.makeText(this, getString(R.string.couldnt_save_data_error) + " " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
@@ -787,6 +895,7 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
+
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.draw_route_options);
@@ -805,8 +914,6 @@ public class MainActivity extends AppCompatActivity
 
         buttonSelectedRouteApply.setOnClickListener(v -> {
             selectedStation = spinner.getSelectedItem().toString();
-
-            // NEW
 
             ArrayList<Bus> resultBuses = new ArrayList<>();
 

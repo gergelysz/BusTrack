@@ -1,5 +1,5 @@
-<resources>
-    <string name="app_name">BusTracker</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name" tools:ignore="PrivateResource">BusTracker</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
@@ -65,4 +65,6 @@
     <string name="show_route_for_bus">Show route for bus</string>
     <string name="select_the_bus_to_show_it_s_route">Select the bus to show it\'s route</string>
     <string name="couldnt_save_data_error">Couldn\'t save data! Error:</string>
+    <string name="firststation">FirstStation</string>
+    <string name="laststation">LastStation</string>
 </resources>

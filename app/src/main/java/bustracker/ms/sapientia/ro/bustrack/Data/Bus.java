@@ -11,6 +11,9 @@ public class Bus extends User {
     private List<String> stations = new ArrayList<>();
     private List<String> firstStationLeavingTime = new ArrayList<>();
     private List<String> lastStationLeavingTime = new ArrayList<>();
+    private List<String> stationsFromFirstStation = new ArrayList<>();
+    private List<String> stationsFromLastStation = new ArrayList<>();
+
 
     public Bus() {
     }
@@ -61,5 +64,21 @@ public class Bus extends User {
 
     public void setLastStationLeavingTime(List<String> lastStationLeavingTime) {
         this.lastStationLeavingTime = lastStationLeavingTime;
+    }
+
+    public List<String> getStationsFromFirstStation() {
+        return stationsFromFirstStation;
+    }
+
+    public void setStationsFromFirstStation(List<String> stationsFromFirstStation) {
+        this.stationsFromFirstStation = stationsFromFirstStation;
+    }
+
+    public List<String> getStationsFromLastStation() {
+        return stationsFromLastStation;
+    }
+
+    public void setStationsFromLastStation(List<String> stationsFromLastStation) {
+        this.stationsFromLastStation = stationsFromLastStation;
     }
 }
