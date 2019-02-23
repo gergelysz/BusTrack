@@ -17,7 +17,6 @@
         mapbox:layout_constraintEnd_toEndOf="parent"
         mapbox:layout_constraintStart_toStartOf="parent"
         mapbox:layout_constraintTop_toTopOf="parent"
-        mapbox:mapbox_cameraZoom="12"
-        mapbox:mapbox_styleUrl="@string/mapbox_style_dark" />
+        mapbox:mapbox_cameraZoom="12" />
 
 </android.support.constraint.ConstraintLayout>
