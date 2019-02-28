@@ -5,12 +5,15 @@ import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
+import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -24,15 +27,17 @@ import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.support.annotation.NonNull;
-// Classes needed to initialize the map
+
 import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.mapbox.android.telemetry.MapboxTelemetry;
+import com.mapbox.android.core.location.LocationEngine;
+import com.mapbox.android.core.location.LocationEngineCallback;
+import com.mapbox.android.core.location.LocationEngineProvider;
+import com.mapbox.android.core.location.LocationEngineRequest;
+import com.mapbox.android.core.location.LocationEngineResult;
+import com.mapbox.android.core.permissions.PermissionsListener;
+import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
@@ -43,104 +48,78 @@ import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.location.LocationComponent;
+import com.mapbox.mapboxsdk.location.modes.CameraMode;
+import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
-// Classes needed to handle location permissions
-import com.mapbox.android.core.permissions.PermissionsListener;
-import com.mapbox.android.core.permissions.PermissionsManager;
+import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
+import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-// Classes needed to add the location engine
-import com.mapbox.android.core.location.LocationEngine;
-import com.mapbox.android.core.location.LocationEngineCallback;
-import com.mapbox.android.core.location.LocationEngineProvider;
-import com.mapbox.android.core.location.LocationEngineRequest;
-import com.mapbox.android.core.location.LocationEngineResult;
-
-import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.Objects;
-// Classes needed to add the location component
-import com.mapbox.mapboxsdk.location.LocationComponent;
-import com.mapbox.mapboxsdk.location.modes.CameraMode;
-import com.mapbox.mapboxsdk.location.modes.RenderMode;
-import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
-import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
-import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import bustracker.ms.sapientia.ro.bustrack.Adapter.ListedBusAdapter;
 import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.Station;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
-import bustracker.ms.sapientia.ro.bustrack.R;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-/**
- * Use the Mapbox Core Library to listen to device location updates
- */
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = "MainActivity";
 
-    public User currentUser = null;
+    private User currentUser = null;
 
     private boolean firstLocationData = true;
 
-    public final Map<String, Bus> buses = new HashMap<>();
+    private final Map<String, Bus> buses = new HashMap<>();
 
-    public final Map<String, Marker> usersMarkers = new HashMap<>();
+    private final Map<String, Marker> usersMarkers = new HashMap<>();
 
-    public Map<String, LatLng> stations = new HashMap<>();
-    public Map<String, String> stations2 = new HashMap<>();
+    private List<String> userIds = new ArrayList<>();
+    private Map<String, LatLng> stations = new HashMap<>();
+    private Map<String, String> stations2 = new HashMap<>();
 
-    public String latitude;
-    public String longitude;
-    public String currentBus = "0";
-    public String currentStatus = "waiting for bus";
-    public String currentUserId = null;
-    public String selectedStation = "";
+    private String latitude;
+    private String longitude;
+    private String currentBus = "0";
+    private String currentStatus = "waiting for bus";
+    private String currentUserId = null;
+    private String selectedStation = "";
 
-    public TextView userIdTextView;
-    public TextView speedTextView;
-    public TextView closestStationTextView;
-    public TextView userStatusTextView;
+    private TextView userIdTextView;
+    private TextView speedTextView;
+    private TextView closestStationTextView;
+    private TextView userStatusTextView;
 
-    public double distanceToClosestStation = 2000000;
-    public String closestStationName = "";
+    private double distanceToClosestStation = 2000000;
+    private String closestStationName = "";
 
-    //    private NavigatixonMapRoute navigationMapRoute;
-    public NavigationMapRoute navigationMapRoute;
-    public DirectionsRoute currentRoute;
+    private NavigationMapRoute navigationMapRoute;
+    private DirectionsRoute currentRoute;
 
-    public boolean focusOnCurrentLocation = false;
+    private boolean focusOnCurrentLocation = true;
 
-    // BusTrack Utility class
-//    UtilityBusTrack util = new UtilityBusTrack();
+    private MapboxMap mapboxMap;
+    private MapView mapView;
 
-
-    // Variables needed to initialize a map
-    public MapboxMap mapboxMap;
-    public MapView mapView;
-
-    // Variables needed to handle location permissions
     private PermissionsManager permissionsManager;
-
-    // Variables needed to add the location engine
     private LocationEngine locationEngine;
-
-    // Variables needed to listen to location updates
     private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
 
     private FirebaseFirestore mFirestore;
@@ -148,34 +127,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public MainActivity() {
     }
 
+    @SuppressLint("LogNotTimber")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
 
-        // Mapbox access token is configured here. This needs to be called either in your application
-        // object or in the same activity which contains the mapview.
         Mapbox.getInstance(this, getString(R.string.access_token));
-
-        // This contains the MapView in XML and needs to be called after the access token is configured.
         setContentView(R.layout.activity_main);
-
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
         mFirestore = FirebaseFirestore.getInstance();
 
-        setStations();
 
         mapView.getMapAsync(this);
 
         TelemetryDefinition telemetry = Mapbox.getTelemetry();
+        assert telemetry != null;
         telemetry.setUserTelemetryRequestState(false);
 
-        Log.d(TAG, "asd1");
-
-
-
-
+        setStations();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -188,8 +160,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-
-        Log.d(TAG, "asd2");
 
         NavigationView navigationView = findViewById(R.id.nav_view);
 
@@ -259,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             statusAndBusSelectorLoader();
         } else if (id == R.id.nav_setup_route) {
 
-           drawRouteForSelectedBus();
+            drawRouteForSelectedBus();
 
         } else if (id == R.id.nav_update_busStations) {
             setStations();
@@ -275,8 +245,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull final MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
-        mapboxMap.setStyle(Style.DARK,
-                style -> enableLocationComponent(style));
+        mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
 
         /*
                     Get stations from database
@@ -318,24 +287,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressWarnings({"MissingPermission"})
     private void enableLocationComponent(@NonNull Style loadedMapStyle) {
-        // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-
             initLocationEngine();
-
-            // Get an instance of the component
             LocationComponent locationComponent = mapboxMap.getLocationComponent();
-
-            // Activate with options
             locationComponent.activateLocationComponent(this, loadedMapStyle, false);
-
-            // Enable to make component visible
             locationComponent.setLocationComponentEnabled(true);
-
-            // Set the component's camera mode
             locationComponent.setCameraMode(CameraMode.TRACKING);
-
-            // Set the component's render mode
             locationComponent.setRenderMode(RenderMode.NORMAL);
         } else {
             permissionsManager = new PermissionsManager(this);
@@ -351,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationEngine = LocationEngineProvider.getBestLocationEngine(this);
 
         LocationEngineRequest request = new LocationEngineRequest.Builder(1000)
-                .setFastestInterval(1000)
+                .setFastestInterval(5000)
                 .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
                 .setDisplacement(0)
                 .setMaxWaitTime(5000)
@@ -402,6 +359,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
          *
          * @param result the LocationEngineResult object which has the last known location within it.
          */
+        @SuppressLint({"LogNotTimber", "SetTextI18n"})
         @Override
         public void onSuccess(LocationEngineResult result) {
             MainActivity activity = activityWeakReference.get();
@@ -409,12 +367,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Log.d(TAG, "asd12");
 
             if (activity != null) {
-                Location location = result.getLastLocation();
-                Log.d(TAG, "getLastLocation: " + location.getLatitude() + " " + location.getLongitude());
 
-                if (location == null) {
-                    return;
-                }
+                Location location = result.getLastLocation();
+                assert location != null;
+
+                Log.d(TAG, "getLastLocation: " + location.getLatitude() + " " + location.getLongitude());
 
                 // Create a Toast which displays the new location's coordinates
                 Toast.makeText(activity, "New location: " + result.getLastLocation().getLatitude() + " " + result.getLastLocation().getLongitude(),
@@ -424,8 +381,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 activity.latitude = String.valueOf(location.getLatitude());
                 activity.longitude = String.valueOf(location.getLongitude());
 
-                activity.setCameraPosition(location);
-
+                if (activity.focusOnCurrentLocation) {
+                    activity.setCameraPosition(location);
+                }
 
                 if (activity.firstLocationData) {
                     activity.uploadCurrentUserData();
@@ -480,6 +438,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
             // Pass the new location to the Maps SDK's LocationComponent
+            assert activity != null;
             if (activity.mapboxMap != null && result.getLastLocation() != null) {
                 activity.mapboxMap.getLocationComponent().forceLocationUpdate(result.getLastLocation());
             }
@@ -492,6 +451,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
          *
          * @param exception the exception message
          */
+        @SuppressLint("LogNotTimber")
         @Override
         public void onFailure(@NonNull Exception exception) {
             Log.d("LocationChangeActivity", exception.getLocalizedMessage());
@@ -537,7 +497,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Prevent leaks
+
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
         }
@@ -633,8 +593,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Log.d(TAG, "Getting users...");
 
         mFirestore.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
+            userIds.clear();
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
+                userIds.add(documentSnapshot.getId());
+                Log.d(TAG, "userIds size: " + userIds.size());
                 if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
                     User newUser = new User(
                             documentSnapshot.getId(),
@@ -647,18 +610,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
                     usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
                             .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))));
-                } else {
+                } else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
                     LatLng newPosition = new LatLng(
                             Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
                             Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
                     Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
                 }
             }
+
+            for (Map.Entry<String, Marker> entry : usersMarkers.entrySet()) {
+                if(!userIds.contains(entry.getKey())) {
+                    mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
+                }
+            }
         });
     }
 
     @SuppressLint("LogNotTimber")
-    public void getRouteForBus(String busNumber, List<String> stationsWaypointList, String stationOrigin, String stationDest) {
+    public void getRouteForBus(List<String> stationsWaypointList, String stationOrigin, String stationDest) {
 
         assert Mapbox.getAccessToken() != null;
         NavigationRoute.Builder builder = NavigationRoute.builder(this)
@@ -784,22 +753,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 assert bus != null;
                 Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName());
 
-//                for (String stationName : bus.getStations()) {
-//                    Log.d(TAG, "stationName: " + stationName);
-//                }
-
-                for (String stationName : bus.getStationsFromFirstStation()) {
-                    Log.d(TAG, "getStationsFromFirstStation: " + stationName);
-                }
-
-                for (String stationName : bus.getStationsFromLastStation()) {
-                    Log.d(TAG, "getStationsFromLastStation: " + stationName);
-                }
-
-                for (String stationName : bus.getLastStationLeavingTime()) {
-                    Log.d(TAG, "lastStationLeavingTime: " + stationName);
-                }
-
                 buses.put(bus.getNumber(), bus);
             }
         });
@@ -819,19 +772,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public HashMap<String, String> loadStationsOffline() {
-        try {
-            ObjectInputStream objectInputStream = new ObjectInputStream(openFileInput("stationsData2.dat"));
-            return (HashMap<String, String>) objectInputStream.readObject();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+//    @SuppressWarnings("unchecked")
+//    public HashMap<String, String> loadStationsOffline() {
+//        try {
+//            ObjectInputStream objectInputStream = new ObjectInputStream(openFileInput("stationsData2.dat"));
+//            return (HashMap<String, String>) objectInputStream.readObject();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return null;
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
 
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     public void selectedStationRouting() {
@@ -895,6 +848,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void drawRouteForSelectedBus() {
+
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.bus_route);
@@ -912,9 +866,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         buttonSelectedBusRouteApply.setClickable(false);
 
         final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectBus);
-
-        List<String> stationsList = new ArrayList<>(stations.keySet());
-        Collections.sort(stationsList);
 
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
@@ -951,11 +902,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         buttonSelectedBusRouteApply.setOnClickListener(v -> {
 
             if (firstStation.isSelected()) {
-//                    getRouteForBus(spinner.getSelectedItem().toString(), firstStation.getText().toString().substring(0, firstStation.getText().toString().indexOf("->") - 1));
-                getRouteForBus(spinner.getSelectedItem().toString(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getStationsFromFirstStation(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationName(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationName());
+                getRouteForBus(Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getStationsFromFirstStation(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationName(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationName());
             } else {
-//                    getRouteForBus(spinner.getSelectedItem().toString(), lastStation.getText().toString().substring(0, lastStation.getText().toString().indexOf("->") - 1));
-                getRouteForBus(spinner.getSelectedItem().toString(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getStationsFromLastStation(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationName(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationName());
+                getRouteForBus(Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getStationsFromLastStation(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationName(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationName());
             }
 
             dialog.cancel();
