@@ -67,4 +67,15 @@
     <string name="couldnt_save_data_error">Couldn\'t save data! Error:</string>
     <string name="firststation">FirstStation</string>
     <string name="laststation">LastStation</string>
+    <string name="settings">Settings</string>
+    <string-array name="update_frequency_options">
+        <item>Fastest</item>
+        <item>5 seconds</item>
+        <item>10 seconds</item>
+    </string-array>
+    <string-array name="update_frequency_options_values">
+        <item>1000</item>
+        <item>5000</item>
+        <item>10000</item>
+    </string-array>
 </resources>

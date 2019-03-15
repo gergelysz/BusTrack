@@ -10,9 +10,6 @@ public class Station {
     private String longitude;
     private String name;
 
-    public Station() {
-    }
-
     public Station(LatLng coordinates, String name) {
         this.coordinates = coordinates;
         this.name = name;

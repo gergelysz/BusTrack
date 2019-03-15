@@ -1,11 +1,14 @@
-package bustracker.ms.sapientia.ro.bustrack;
+package bustracker.ms.sapientia.ro.bustrack.Activities;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -74,6 +77,7 @@ import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.Station;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
+import bustracker.ms.sapientia.ro.bustrack.R;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -83,6 +87,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private static final String TAG = "MainActivity";
 
+    public static final String DARK_MAP_THEME = "switch_theme";
+
     private User currentUser = null;
 
     private boolean firstLocationData = true;
@@ -91,9 +97,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final Map<String, Marker> usersMarkers = new HashMap<>();
 
-    private List<String> userIds = new ArrayList<>();
-    private Map<String, LatLng> stations = new HashMap<>();
-    private Map<String, String> stations2 = new HashMap<>();
+    private final List<String> userIds = new ArrayList<>();
+    private final Map<String, LatLng> stations = new HashMap<>();
+    private final Map<String, String> stations2 = new HashMap<>();
+
+    private boolean skipReadSettings = true;
 
     private String latitude;
     private String longitude;
@@ -113,16 +121,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
 
-    private boolean focusOnCurrentLocation = true;
+    private final boolean focusOnCurrentLocation = true;
 
-    private MapboxMap mapboxMap;
-    private MapView mapView;
+    public MapboxMap mapboxMap;
+    public MapView mapView;
 
     private PermissionsManager permissionsManager;
     private LocationEngine locationEngine;
-    private MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
+    private final MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
 
-    private FirebaseFirestore mFirestore;
+    private FirebaseFirestore firestoreDb;
 
     public MainActivity() {
     }
@@ -138,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
-        mFirestore = FirebaseFirestore.getInstance();
+        firestoreDb = FirebaseFirestore.getInstance();
 
 
         mapView.getMapAsync(this);
@@ -147,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         assert telemetry != null;
         telemetry.setUserTelemetryRequestState(false);
 
-        setStations();
+//        setStations();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -178,8 +186,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         navigationView.setNavigationItemSelectedListener(this);
 
-        getUsersData();
-        getBusesDataFromDatabase();
+//        getUsersData();
+//        getBusesDataFromDatabase();
     }
 
     @Override
@@ -208,6 +216,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             return true;
         }
 
@@ -247,6 +256,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
 
+        readSettings();
         /*
                     Get stations from database
                     coordinates and name
@@ -276,10 +286,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 ////                Toast.makeText(this, "stations data not found in file", Toast.LENGTH_SHORT).show();
 //            setStations();
 //        }
-//        setStations();
-//
-//        getUsersData();
-//        getBusesDataFromDatabase();
+        setStations();
+
+        getUsersData();
+        getBusesDataFromDatabase();
     }
 
     /**
@@ -345,6 +355,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 new LatLng(location.getLatitude(), location.getLongitude()), 16));
     }
 
+
     private static class MainActivityLocationCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
@@ -402,7 +413,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     Log.d(TAG, "Current user updated data: " + activity.currentUser.getId() + " " + activity.currentUser.getBus() + " " + activity.currentUser.getStatus() + " " + activity.currentUser.getLatitude() + " " + activity.currentUser.getLongitude());
 
-                    activity.mFirestore.collection("users")
+                    activity.firestoreDb.collection("users")
                             .document(activity.currentUser.getId())
                             .set(activity.currentUser)
                             .addOnSuccessListener(aVoid ->
@@ -474,6 +485,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         mapView.onResume();
+        if(!skipReadSettings) {
+            readSettings();
+        }
+        skipReadSettings = false;
+
     }
 
     @Override
@@ -502,7 +518,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             locationEngine.removeLocationUpdates(callback);
         }
 
-        if (currentUserId != null) mFirestore.collection("users").document(currentUserId).delete();
+        if (currentUserId != null) firestoreDb.collection("users").document(currentUserId).delete();
 
         mapView.onDestroy();
     }
@@ -514,7 +530,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint("LogNotTimber")
-    public void setStations() {
+    private void setStations() {
 
         /*
                 Setting stations from database
@@ -523,7 +539,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         Log.d(TAG, "setStations function called");
 
-        mFirestore.collection("stations").get().addOnSuccessListener(queryDocumentSnapshots -> {
+        firestoreDb.collection("stations").get().addOnSuccessListener(queryDocumentSnapshots -> {
 
             LatLng coordinates;
             String latitude;
@@ -565,7 +581,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
-    public void uploadCurrentUserData() {
+    private void uploadCurrentUserData() {
 
         /*
                 Upload first user data
@@ -575,14 +591,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
 
-        mFirestore.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
+        firestoreDb.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
             Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
             currentUserId = documentReference.getId();
         }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
     }
 
     @SuppressLint("LogNotTimber")
-    public void getUsersData() {
+    private void getUsersData() {
 
         /*
                 Getting data from database
@@ -592,7 +608,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         Log.d(TAG, "Getting users...");
 
-        mFirestore.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
+        firestoreDb.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
             userIds.clear();
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
@@ -619,7 +635,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             for (Map.Entry<String, Marker> entry : usersMarkers.entrySet()) {
-                if(!userIds.contains(entry.getKey())) {
+                if (!userIds.contains(entry.getKey())) {
                     mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
                 }
             }
@@ -627,7 +643,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint("LogNotTimber")
-    public void getRouteForBus(List<String> stationsWaypointList, String stationOrigin, String stationDest) {
+    private void getRouteForBus(List<String> stationsWaypointList, String stationOrigin, String stationDest) {
 
         assert Mapbox.getAccessToken() != null;
         NavigationRoute.Builder builder = NavigationRoute.builder(this)
@@ -684,7 +700,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
 
     @SuppressLint({"SetTextI18n", "ResourceAsColor"})
-    public void statusAndBusSelectorLoader() {
+    private void statusAndBusSelectorLoader() {
 
         final Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -738,9 +754,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint("LogNotTimber")
-    public void getBusesDataFromDatabase() {
+    private void getBusesDataFromDatabase() {
 
-        mFirestore.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
+        firestoreDb.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
 
@@ -759,7 +775,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint("LogNotTimber")
-    public void saveStationsOffline() {
+    private void saveStationsOffline() {
         try {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(openFileOutput("stationsData2.dat", MODE_PRIVATE));
             objectOutputStream.writeObject(stations2);
@@ -787,7 +803,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //    }
 
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
-    public void selectedStationRouting() {
+    private void selectedStationRouting() {
 
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -847,7 +863,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         dialog.show();
     }
 
-    public void drawRouteForSelectedBus() {
+    private void drawRouteForSelectedBus() {
 
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -911,5 +927,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
 
         dialog.show();
+    }
+
+    private void readSettings() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+//        mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
+        boolean isDarkModeChecked = sharedPreferences.getBoolean(DARK_MAP_THEME, false);
+        if (isDarkModeChecked) {
+            mapboxMap.setStyle(Style.DARK);
+        } else {
+            mapboxMap.setStyle(Style.LIGHT);
+        }
     }
 }
