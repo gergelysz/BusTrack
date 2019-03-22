@@ -1,46 +1,36 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"--><!--xmlns:tools="http://schemas.android.com/tools"--><!--android:id="@+id/status_and_bus_main"--><!--android:layout_width="match_parent"--><!--android:layout_height="match_parent"--><!--android:padding="8dp">-->
+
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/status_and_bus_main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content"
+    android:layout_alignParentTop="true"
+    android:layout_marginTop="28dp"
+    android:layout_marginBottom="16dp"
+    android:background="@drawable/popup_style_set"
+    android:padding="4dp"
+    tools:ignore="UselessParent">
 
-    <RelativeLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/editText_result_title"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:background="@drawable/popup_style_set"
-        android:padding="12dp"
-        tools:ignore="UselessParent">
+        android:fontFamily="@font/modernsans"
+        android:text="@string/list_of_all_buses_heading_to"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
 
-        <TextView
-            android:id="@+id/editText_result_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/modernsans"
-            android:text="@string/list_of_all_buses_heading_to"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
+    <View
+        android:id="@+id/view_line"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/editText_result_title"
+        android:background="@color/white" />
 
-        <View
-            android:id="@+id/view_line"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/white"
-            android:layout_below="@id/editText_result_title"/>
-
-        <ListView
-            android:id="@+id/listView_result_buses"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@id/view_line" />
-
-    </RelativeLayout>
+    <ListView
+        android:id="@+id/listView_result_buses"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/view_line" />
 
 </RelativeLayout>
-
-    <!--<?xml version="1.0" encoding="utf-8"?>--><!--<android.support.constraint.ConstraintLayout--><!--xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"--><!--android:layout_height="match_parent">-->
-
-    <!--<ListView--><!--android:id="@+id/listView_result_buses"--><!--android:layout_width="match_parent"--><!--android:layout_height="match_parent" />-->
-
-    <!--</android.support.constraint.ConstraintLayout>-->

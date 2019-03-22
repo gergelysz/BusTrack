@@ -1,15 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <SwitchPreference
+        android:checked="true"
+        android:defaultValue="true"
         android:icon="@drawable/ic_dark"
         android:key="switch_theme"
         android:summaryOff="Dark map theme disabled"
         android:summaryOn="Dark map theme enabled"
         android:title="Dark map theme" />
+    <SwitchPreference
+        android:checked="true"
+        android:defaultValue="true"
+        android:icon="@drawable/ic_current_location"
+        android:key="switch_current_location"
+        android:summaryOff="Current location focus disabled"
+        android:summaryOn="Current location focus enabled"
+        android:title="Focus on current location" />
     <ListPreference
+        android:defaultValue="5000"
         android:entries="@array/update_frequency_options"
         android:entryValues="@array/update_frequency_options_values"
         android:icon="@drawable/ic_cloud"
         android:key="list_update_frequency"
         android:title="Location update frequency" />
+    <ListPreference
+        android:defaultValue="1"
+        android:entries="@array/update_priority_mode"
+        android:entryValues="@array/update_priority_mode_values"
+        android:icon="@drawable/ic_battery"
+        android:key="list_update_priority"
+        android:title="Location update priority" />
 </PreferenceScreen>

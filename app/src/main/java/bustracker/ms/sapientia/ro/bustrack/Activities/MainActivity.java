@@ -63,6 +63,7 @@ import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -82,12 +83,15 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.CURRENT_LOCATION_FOCUS;
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_FREQUENCY;
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_PRIORITY;
+
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = "MainActivity";
-
-    public static final String DARK_MAP_THEME = "switch_theme";
 
     private User currentUser = null;
 
@@ -97,9 +101,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final Map<String, Marker> usersMarkers = new HashMap<>();
 
+    private List<Marker> stationsMarkers = new ArrayList<>();
+
     private final List<String> userIds = new ArrayList<>();
-    private final Map<String, LatLng> stations = new HashMap<>();
-    private final Map<String, String> stations2 = new HashMap<>();
+    private Map<String, LatLng> stations = new HashMap<>();
+    private Map<String, String> stations2 = null;
+
+    private int UPDATE_INTERVAL;
+    private int UPDATE_BATTERY;
 
     private boolean skipReadSettings = true;
 
@@ -121,10 +130,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
 
-    private final boolean focusOnCurrentLocation = true;
+    private boolean focusOnCurrentLocation;
 
-    public MapboxMap mapboxMap;
-    public MapView mapView;
+    private MapboxMap mapboxMap;
+    private MapView mapView;
 
     private PermissionsManager permissionsManager;
     private LocationEngine locationEngine;
@@ -148,14 +157,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         firestoreDb = FirebaseFirestore.getInstance();
 
-
         mapView.getMapAsync(this);
 
         TelemetryDefinition telemetry = Mapbox.getTelemetry();
         assert telemetry != null;
         telemetry.setUserTelemetryRequestState(false);
-
-//        setStations();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -185,9 +191,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         speedTextView = headerView.findViewById(R.id.user_speed_nav_header);
 
         navigationView.setNavigationItemSelectedListener(this);
-
-//        getUsersData();
-//        getBusesDataFromDatabase();
     }
 
     @Override
@@ -227,22 +230,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
 
-        if (id == R.id.nav_select_station) {
-            selectedStationRouting();
-        } else if (id == R.id.nav_offline_bus_data) {
-            saveStationsOffline();
-        } else if (id == R.id.nav_change_statusAndBus) {
-            statusAndBusSelectorLoader();
-        } else if (id == R.id.nav_setup_route) {
-
-            drawRouteForSelectedBus();
-
-        } else if (id == R.id.nav_update_busStations) {
-            setStations();
-            saveStationsOffline();
+        switch (item.getItemId()) {
+            case R.id.nav_select_station:
+                selectedStationRouting();
+                break;
+            case R.id.nav_offline_bus_data:
+                break;
+            case R.id.nav_change_statusAndBus:
+                statusAndBusSelectorLoader();
+                break;
+            case R.id.nav_setup_route:
+                drawRouteForSelectedBus();
+                break;
+            case R.id.nav_update_busStations:
+                setStations();
+                break;
+            case R.id.nav_settings:
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                break;
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -250,6 +256,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
+    @SuppressLint("LogNotTimber")
     @Override
     public void onMapReady(@NonNull final MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
@@ -257,38 +264,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
 
         readSettings();
+
         /*
                     Get stations from database
                     coordinates and name
-             */
+        */
 
-//        stations2 = loadStationsOffline();
+        stations2 = loadStationsOffline();
 
-//        if (stations2 != null) {
-//            stations = new HashMap<>();
-////                Toast.makeText(this, "stations data found in file", Toast.LENGTH_SHORT).show();
-//            for (Map.Entry<String, String> entry : stations2.entrySet()) {
-//                String key = entry.getKey();
-//                String[] value = entry.getValue().split(",");
-//                String latitude = value[0];
-//                String longitude = value[1];
-//                LatLng coordinates = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
-//                stations.put(key, coordinates);
-//                Log.d(TAG, "stationsData: " + key + " " + value[0] + " " + value[1]);
-//                mapboxMap.addMarker(new MarkerOptions()
-//                        .position(coordinates)
-//                        .title(key)
-//                        .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
-//                );
-//            }
-//        } else {
-//            stations2 = new HashMap<>();
-////                Toast.makeText(this, "stations data not found in file", Toast.LENGTH_SHORT).show();
-//            setStations();
-//        }
-        setStations();
+        if (stations2 != null) {
+            Toast.makeText(this, "stations data found in file", Toast.LENGTH_LONG).show();
+            for (Map.Entry<String, String> entry : stations2.entrySet()) {
+                String key = entry.getKey();
+                String[] value = entry.getValue().split(",");
+                // value[0] is the latitude and value[1] is the longitude
+                stations.put(key, new LatLng(Double.parseDouble(value[0]), Double.parseDouble(value[1])));
+                Log.d(TAG, "stationsData: " + key + " " + value[0] + " " + value[1]);
+                stationsMarkers.add(mapboxMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(Double.parseDouble(value[0]), Double.parseDouble(value[1])))
+                        .title(key)
+                        .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
+                ));
+            }
+        } else {
+            stations2 = new HashMap<>();
+            Toast.makeText(this, "stations data not found in file", Toast.LENGTH_LONG).show();
+            setStations();
+        }
 
+        // Get the users data from database
         getUsersData();
+        // Get the buses data from database
         getBusesDataFromDatabase();
     }
 
@@ -318,10 +324,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationEngine = LocationEngineProvider.getBestLocationEngine(this);
 
         LocationEngineRequest request = new LocationEngineRequest.Builder(1000)
-                .setFastestInterval(5000)
-                .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                .setFastestInterval(UPDATE_INTERVAL)
+                .setPriority(UPDATE_BATTERY)
                 .setDisplacement(0)
-                .setMaxWaitTime(5000)
+                .setMaxWaitTime(UPDATE_INTERVAL)
                 .build();
 
         locationEngine.requestLocationUpdates(request, callback, getMainLooper());
@@ -350,9 +356,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    /**
+     * Function to move the camera
+     * to the given location.
+     *
+     * @param location - the given location
+     */
     private void setCameraPosition(Location location) {
-        mapboxMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                new LatLng(location.getLatitude(), location.getLongitude()), 16));
+        mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 15));
     }
 
 
@@ -375,8 +386,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         public void onSuccess(LocationEngineResult result) {
             MainActivity activity = activityWeakReference.get();
 
-            Log.d(TAG, "asd12");
-
             if (activity != null) {
 
                 Location location = result.getLastLocation();
@@ -384,11 +393,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 Log.d(TAG, "getLastLocation: " + location.getLatitude() + " " + location.getLongitude());
 
-                // Create a Toast which displays the new location's coordinates
-                Toast.makeText(activity, "New location: " + result.getLastLocation().getLatitude() + " " + result.getLastLocation().getLongitude(),
-                        Toast.LENGTH_SHORT).show();
+                if (!activity.firstLocationData) {
+                    // Create a Toast which displays the new location's coordinates
+                    Toast.makeText(activity, "New location: " + result.getLastLocation().getLatitude() + " " + result.getLastLocation().getLongitude(),
+                            Toast.LENGTH_SHORT).show();
+                }
 
-                activity.setCameraPosition(location);
                 activity.latitude = String.valueOf(location.getLatitude());
                 activity.longitude = String.valueOf(location.getLongitude());
 
@@ -399,7 +409,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (activity.firstLocationData) {
                     activity.uploadCurrentUserData();
                     activity.firstLocationData = false;
-                    Log.d(TAG, "asd13");
                 }
 
                 if (activity.currentUserId != null) {
@@ -485,7 +494,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         mapView.onResume();
-        if(!skipReadSettings) {
+        if (!skipReadSettings) {
             readSettings();
         }
         skipReadSettings = false;
@@ -510,6 +519,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView.onSaveInstanceState(outState);
     }
 
+    /**
+     * When this function is called, the app
+     * deletes it's user's data from the database
+     * and stops getting location updates.
+     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -529,13 +543,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView.onLowMemory();
     }
 
+    /**
+     * Setting stations from database
+     * and drawing them with markers on map
+     */
     @SuppressLint("LogNotTimber")
     private void setStations() {
-
-        /*
-                Setting stations from database
-                and drawing them with markers on map
-         */
 
         Log.d(TAG, "setStations function called");
 
@@ -565,11 +578,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 Log.d(TAG, "reading bus station data: " + station.getName() + " coordinates: " + station.getCoordinates());
 
-                mapboxMap.addMarker(new MarkerOptions()
+
+                stationsMarkers.add(mapboxMap.addMarker(new MarkerOptions()
                         .position(station.getCoordinates())
                         .title(station.getName())
                         .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station))
-                );
+                ));
 
                 stations.put(documentSnapshot.getId(), coordinates);
                 stations2.put(documentSnapshot.getId(), loc);
@@ -578,8 +592,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         }).addOnFailureListener(e -> Log.d(TAG, "Couldn't get stations data from database!"));
+
+        saveStationsOffline();
     }
 
+    /**
+     * Function to create a new user and upload his/her
+     * data to the Firestore database.
+     */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
 
@@ -597,14 +617,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
     }
 
+    /**
+     * Getting data from database
+     * and drawing user on map with marker
+     * if he/she is on bus.
+     */
+
     @SuppressLint("LogNotTimber")
     private void getUsersData() {
-
-        /*
-                Getting data from database
-                and drawing user on map with marker
-                if he/she is on bus.
-         */
 
         Log.d(TAG, "Getting users...");
 
@@ -614,6 +634,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
                 userIds.add(documentSnapshot.getId());
                 Log.d(TAG, "userIds size: " + userIds.size());
+                // if user isn't yet in the local users list
                 if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
                     User newUser = new User(
                             documentSnapshot.getId(),
@@ -624,24 +645,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             documentSnapshot.getString("longitude")
                     );
                     Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
-                    usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
-                            .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))));
-                } else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
-                    LatLng newPosition = new LatLng(
-                            Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
-                            Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
-                    Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
+                    if (newUser.getStatus().equals("on bus")) {
+                        usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
+                                .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))
+                                .setTitle(newUser.getBus())));
+                    }
+
+                }
+                // user is already in the local users list
+                else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
+                    if (Objects.equals(documentSnapshot.getString("status"), "on bus")) {
+                        LatLng newPosition = new LatLng(
+                                Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
+                                Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
+                        Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
+                    } else {
+                        mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())));
+                        usersMarkers.remove(documentSnapshot.getId());
+                    }
+
                 }
             }
 
             for (Map.Entry<String, Marker> entry : usersMarkers.entrySet()) {
                 if (!userIds.contains(entry.getKey())) {
                     mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
+                    usersMarkers.remove(entry.getKey());
                 }
             }
         });
     }
 
+    /**
+     * Function to draw a route by the given coordinates.
+     *
+     * @param stationsWaypointList - waypoints between the stationOrigin and stationDest
+     * @param stationOrigin        - starting point coordinates
+     * @param stationDest          - destination point coordinates
+     */
     @SuppressLint("LogNotTimber")
     private void getRouteForBus(List<String> stationsWaypointList, String stationOrigin, String stationDest) {
 
@@ -677,7 +718,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Draw the route on the map
                         if (navigationMapRoute != null) {
-//                            navigationMapRoute.removeRoute();
                             navigationMapRoute.updateRouteVisibilityTo(false);
                         } else {
                             navigationMapRoute = new NavigationMapRoute(null, mapView, mapboxMap, R.style.NavigationMapRoute);
@@ -694,11 +734,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
-    /*
-               Dialog to change the current user's
-               status and bus, if he/she is on bus
+    /**
+     * Dialog to change the current user's
+     * status and bus, if he/she is on bus.
      */
-
     @SuppressLint({"SetTextI18n", "ResourceAsColor"})
     private void statusAndBusSelectorLoader() {
 
@@ -706,6 +745,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.status_and_bus_set);
         dialog.setCancelable(true);
+
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
         final RadioButton onBus, waitingForBus;
         onBus = dialog.findViewById(R.id.radioButton);
@@ -753,33 +794,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         dialog.show();
     }
 
+    /**
+     * Function to read data about all of the buses
+     * from the 'busesData' collection.
+     */
     @SuppressLint("LogNotTimber")
     private void getBusesDataFromDatabase() {
-
         firestoreDb.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-
-                /*
-                            Converting the data from Firestore to Bus object
-                 */
-
                 Bus bus = documentSnapshot.toObject(Bus.class);
-
                 assert bus != null;
                 Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName());
-
                 buses.put(bus.getNumber(), bus);
             }
         });
     }
 
+    /**
+     * Function to save the stations in a .dat file
+     * with the purpose of not having to read all the stations
+     * from the database every time when the application is launched.
+     */
     @SuppressLint("LogNotTimber")
     private void saveStationsOffline() {
         try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(openFileOutput("stationsData2.dat", MODE_PRIVATE));
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(openFileOutput("stationsData.dat", MODE_PRIVATE));
             objectOutputStream.writeObject(stations2);
-            Log.d(TAG, "asdasdasdasd" + objectOutputStream.toString());
             Log.d(TAG, "asdasdasdasd" + stations2);
             objectOutputStream.close();
         } catch (IOException e) {
@@ -788,20 +829,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-//    @SuppressWarnings("unchecked")
-//    public HashMap<String, String> loadStationsOffline() {
-//        try {
-//            ObjectInputStream objectInputStream = new ObjectInputStream(openFileInput("stationsData2.dat"));
-//            return (HashMap<String, String>) objectInputStream.readObject();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return null;
-//        } catch (ClassNotFoundException e) {
-//            e.printStackTrace();
-//            return null;
-//        }
-//    }
+    /**
+     * Function to load the stations from the .dat file
+     * which is saved in the 'saveStationsOffline' function.
+     *
+     * @return - HashMap with the station names and their coordinates
+     */
+    @SuppressWarnings("unchecked")
+    private HashMap<String, String> loadStationsOffline() {
+        try {
+            ObjectInputStream objectInputStream = new ObjectInputStream(openFileInput("stationsData.dat"));
+            return (HashMap<String, String>) objectInputStream.readObject();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
+    /**
+     * Function to display available buses
+     * for the given station.
+     */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
 
@@ -809,6 +860,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.draw_route_options);
         dialog.setCancelable(true);
+
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
         Button buttonSelectedRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
 
@@ -863,12 +916,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         dialog.show();
     }
 
+    /**
+     * Function to show a dialog where the user
+     * can select a bus and display it's route
+     * based on the selected stations.
+     */
     private void drawRouteForSelectedBus() {
 
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.bus_route);
         dialog.setCancelable(true);
+
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
         RadioButton firstStation, lastStation;
         firstStation = dialog.findViewById(R.id.radioButtonRouting);
@@ -929,14 +989,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         dialog.show();
     }
 
+
+    /**
+     * Function to read settings for dark mode map theme and
+     * other settings, when activity is resumed from SettingsActivity
+     */
     private void readSettings() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-//        mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
-        boolean isDarkModeChecked = sharedPreferences.getBoolean(DARK_MAP_THEME, false);
-        if (isDarkModeChecked) {
+
+        if (sharedPreferences.getBoolean(DARK_MAP_THEME, true)) {
             mapboxMap.setStyle(Style.DARK);
+            for (Marker marker : stationsMarkers) {
+                marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station));
+            }
         } else {
             mapboxMap.setStyle(Style.LIGHT);
+            for (Marker marker : stationsMarkers) {
+                marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station_light));
+            }
         }
+
+        focusOnCurrentLocation = sharedPreferences.getBoolean(CURRENT_LOCATION_FOCUS, true);
+
+        UPDATE_INTERVAL = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_FREQUENCY, "5000")));
+
+        UPDATE_BATTERY = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_PRIORITY, "1")));
     }
 }

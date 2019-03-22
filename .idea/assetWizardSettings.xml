@@ -29,12 +29,26 @@
                                           </PersistentState>
                                         </value>
                                       </entry>
+                                      <entry key="image">
+                                        <value>
+                                          <PersistentState>
+                                            <option name="values">
+                                              <map>
+                                                <entry key="color" value="000000" />
+                                              </map>
+                                            </option>
+                                          </PersistentState>
+                                        </value>
+                                      </entry>
                                     </map>
                                   </option>
                                   <option name="values">
                                     <map>
-                                      <entry key="theme" value="HOLO_DARK" />
-                                      <entry key="themeColor" value="ffffff" />
+                                      <entry key="assetType" value="IMAGE" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Desktop/7551f9d89c.svg" />
+                                      <entry key="outputName" value="ic_bus_station_light" />
+                                      <entry key="theme" value="CUSTOM" />
+                                      <entry key="themeColor" value="000000" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -45,13 +59,24 @@
                                 <PersistentState>
                                   <option name="children">
                                     <map>
+                                      <entry key="backgroundImage">
+                                        <value>
+                                          <PersistentState>
+                                            <option name="values">
+                                              <map>
+                                                <entry key="scalingPercent" value="70" />
+                                              </map>
+                                            </option>
+                                          </PersistentState>
+                                        </value>
+                                      </entry>
                                       <entry key="foregroundImage">
                                         <value>
                                           <PersistentState>
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="scalingPercent" value="30" />
+                                                <entry key="scalingPercent" value="49" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -62,9 +87,10 @@
                                   <option name="values">
                                     <map>
                                       <entry key="backgroundAssetType" value="COLOR" />
-                                      <entry key="backgroundColor" value="999999" />
+                                      <entry key="backgroundColor" value="ffffff" />
+                                      <entry key="backgroundImage" value="$USER_HOME$/Desktop/vmsiwczq.png" />
                                       <entry key="backgroundLayerName" value="ic_launcher_background_bus" />
-                                      <entry key="foregroundImage" value="$USER_HOME$/Desktop/bus_1153906.png" />
+                                      <entry key="foregroundImage" value="$USER_HOME$/Desktop/7551f9d89c.svg" />
                                       <entry key="foregroundLayerName" value="ic_launcher_foreground_bus" />
                                       <entry key="outputName" value="ic_launcher_bus" />
                                     </map>
@@ -116,6 +142,11 @@
                             </entry>
                           </map>
                         </option>
+                        <option name="values">
+                          <map>
+                            <entry key="outputIconType" value="ACTIONBAR" />
+                          </map>
+                        </option>
                       </PersistentState>
                     </value>
                   </entry>
@@ -139,7 +170,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="jar:file:/home/gergelysz/Documents/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/file/ic_cloud_black_24dp.xml" />
+                                      <entry key="url" value="jar:file:/home/gergelysz/Documents/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/device/ic_battery_std_black_24dp.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -149,8 +180,9 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="ic_cloud" />
-                            <entry key="sourceFile" value="$USER_HOME$" />
+                            <entry key="assetSourceType" value="FILE" />
+                            <entry key="outputName" value="ic_bus_station_white" />
+                            <entry key="sourceFile" value="$USER_HOME$/Desktop/7551f9d89c.svg" />
                           </map>
                         </option>
                       </PersistentState>
