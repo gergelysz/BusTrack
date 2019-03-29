@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.Spinner;
@@ -67,6 +68,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -101,10 +103,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final Map<String, Marker> usersMarkers = new HashMap<>();
 
-    private List<Marker> stationsMarkers = new ArrayList<>();
+    private final List<Marker> stationsMarkers = new ArrayList<>();
+
+    private List<User> users = new ArrayList<>();
 
     private final List<String> userIds = new ArrayList<>();
-    private Map<String, LatLng> stations = new HashMap<>();
+    private final Map<String, LatLng> stations = new HashMap<>();
     private Map<String, String> stations2 = null;
 
     private int UPDATE_INTERVAL;
@@ -117,7 +121,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String currentBus = "0";
     private String currentStatus = "waiting for bus";
     private String currentUserId = null;
+    private String currentDirection = "0";
     private String selectedStation = "";
+
+    private int beforeCurrentHour;
+    private int beforeCurrentMinute;
+    private int atCurrentHour;
+    private int atCurrentMinute;
+    private int afterCurrentHour;
+    private int afterCurrentMinute;
 
     private TextView userIdTextView;
     private TextView speedTextView;
@@ -152,6 +164,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         Mapbox.getInstance(this, getString(R.string.access_token));
         setContentView(R.layout.activity_main);
+
         mapView = findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
@@ -419,8 +432,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     activity.currentUser.setLongitude(activity.longitude);
                     activity.currentUser.setTimestamp(Timestamp.now());
                     activity.currentUser.setId(activity.currentUserId);
+                    activity.currentUser.setDirection(activity.currentDirection);
 
-                    Log.d(TAG, "Current user updated data: " + activity.currentUser.getId() + " " + activity.currentUser.getBus() + " " + activity.currentUser.getStatus() + " " + activity.currentUser.getLatitude() + " " + activity.currentUser.getLongitude());
+                    Log.d(TAG, "Current user updated data: " + activity.currentUser.getId() + " " + activity.currentUser.getBus() + " " + activity.currentUser.getStatus() + " " + activity.currentUser.getLatitude() + " " + activity.currentUser.getLongitude() + " " + activity.currentUser.getDirection());
 
                     activity.firestoreDb.collection("users")
                             .document(activity.currentUser.getId())
@@ -603,11 +617,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
 
-        /*
-                Upload first user data
-         */
-
-        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude);
+        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection);
 
         userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
 
@@ -642,8 +652,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             documentSnapshot.getString("status"),
                             documentSnapshot.getTimestamp("timestamp"),
                             documentSnapshot.getString("latitude"),
-                            documentSnapshot.getString("longitude")
+                            documentSnapshot.getString("longitude"),
+                            documentSnapshot.getString("direction")
                     );
+                    users.add(newUser);
                     Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
                     if (newUser.getStatus().equals("on bus")) {
                         usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
@@ -669,6 +681,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             for (Map.Entry<String, Marker> entry : usersMarkers.entrySet()) {
                 if (!userIds.contains(entry.getKey())) {
+                    for (User user : users) {
+                        if (user.getId().equals(entry.getKey())) {
+                            users.remove(user);
+                            break;
+                        }
+                    }
                     mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
                     usersMarkers.remove(entry.getKey());
                 }
@@ -748,9 +766,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
-        final RadioButton onBus, waitingForBus;
-        onBus = dialog.findViewById(R.id.radioButton);
-        waitingForBus = dialog.findViewById(R.id.radioButton2);
+        ImageView imageWaitingForBus, imageOnBus;
+
+        imageWaitingForBus = dialog.findViewById(R.id.image_status_waiting_for_bus);
+        imageOnBus = dialog.findViewById(R.id.image_status_on_bus);
 
         final TextView textView = dialog.findViewById(R.id.editText_sab_selectBus);
 
@@ -760,35 +779,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         spinner.setVisibility(View.INVISIBLE);
 
         Button applyButton = dialog.findViewById(R.id.button_apply_status_and_bus);
-
-        onBus.setOnClickListener(v -> {
-            spinner.setVisibility(View.VISIBLE);
-            textView.setVisibility(View.VISIBLE);
-        });
-
-        waitingForBus.setOnClickListener(v -> {
-            spinner.setVisibility(View.INVISIBLE);
-            textView.setVisibility(View.INVISIBLE);
-        });
+        applyButton.setVisibility(View.INVISIBLE);
 
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
         spinner.setAdapter(spinnerAdapter);
 
-        applyButton.setOnClickListener(v -> {
-            if (onBus.isChecked()) {
-                currentStatus = "on bus";
-                userStatusTextView.setText(getString(R.string.current_status) + currentStatus);
-                currentBus = spinner.getSelectedItem().toString();
-                dialog.cancel();
-            } else if (waitingForBus.isChecked()) {
-                currentStatus = "waiting for bus";
-                userStatusTextView.setText(getString(R.string.current_status) + currentStatus);
-                currentBus = "0";
-                dialog.cancel();
-            }
+        imageWaitingForBus.setOnClickListener(v -> {
+            currentStatus = "waiting for bus";
+            userStatusTextView.setText(getString(R.string.current_status) + currentStatus);
+            currentBus = "0";
             Snackbar.make(findViewById(R.id.mapView), R.string.successfully_updated, Snackbar.LENGTH_SHORT).show();
+            dialog.cancel();
+        });
 
+        imageOnBus.setOnClickListener(v -> {
+            currentStatus = "on bus";
+            userStatusTextView.setText(getString(R.string.current_status) + currentStatus);
+            textView.setVisibility(View.VISIBLE);
+            spinner.setVisibility(View.VISIBLE);
+            applyButton.setVisibility(View.VISIBLE);
+        });
+
+        applyButton.setOnClickListener(v -> {
+            currentBus = spinner.getSelectedItem().toString();
+            Snackbar.make(findViewById(R.id.mapView), R.string.successfully_updated, Snackbar.LENGTH_SHORT).show();
+            dialog.cancel();
         });
 
         dialog.show();
@@ -805,7 +821,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
                 Bus bus = documentSnapshot.toObject(Bus.class);
                 assert bus != null;
-                Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName());
+                Log.d(TAG, "bus number read: " + bus.getNumber() + " " + bus.getFirstStationName() + " " + bus.getLastStationName() + " " + bus.getFirstStationLeavingTime().get(0));
                 buses.put(bus.getNumber(), bus);
             }
         });
@@ -821,7 +837,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         try {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(openFileOutput("stationsData.dat", MODE_PRIVATE));
             objectOutputStream.writeObject(stations2);
-            Log.d(TAG, "asdasdasdasd" + stations2);
             objectOutputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -855,6 +870,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
+
+        // Current hour
+        int currentHour = Calendar.getInstance().get(Calendar.HOUR);
+        int currentMin = Calendar.getInstance().get(Calendar.MINUTE);
+
+        Log.d(TAG, "Current hour and minute: " + currentHour + ":" + currentMin);
+
+        ArrayList<Integer> closestHours = new ArrayList<>();
+        ArrayList<Integer> closestMinutes = new ArrayList<>();
 
         Dialog dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
@@ -890,20 +914,170 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             dialog.setContentView(R.layout.result_buses);
             dialog.setCancelable(true);
+
             ArrayList<ListedBusData> listedBusData = new ArrayList<>();
 
             TextView textViewHeadingTo = dialog.findViewById(R.id.editText_result_title);
             textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to) + " " + selectedStation);
 
-            // TODO
-            String comesIn = "10";
+            String comesIn = null;
+            float comesInCalc;
+            float busDistanceToItsClosestStation = 20000;
+            String busClosestStationName = null;
+            int speedIsXMetersPerMinute = 500; //  666 - 40 km/h    500 - 30 km/h
             String realTimeBusData = "Realtime bus not found! xd";
 
-            listedBusData.clear();
+            Location selectedStationLocation = new Location("");
+            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                String key = entry.getKey();
+                LatLng value = entry.getValue();
+                if (key.equals(selectedStation)) {
+                    selectedStationLocation.setLatitude(value.getLatitude());
+                    selectedStationLocation.setLongitude(value.getLongitude());
+                    break;
+                }
+            }
 
             for (Bus bus : resultBuses) {
-                listedBusData.add(new ListedBusData(bus.getNumber(), realTimeBusData, comesIn));
+
+                Log.d(TAG, "resultbus3");
+
+                Location busLocation = new Location("");
+
+                /*
+                    Searches for real-time bus
+                    in the list of users.
+                 */
+                for (User user : users) {
+                    // TODO: mint a tippelosnel, nem mehet sapirol sapira
+                    if (user.getBus().equals(bus.getNumber()) && user.getStatus().equals("on bus") && user.getDirection().equals(currentDirection)) {
+
+                        busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
+                        busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
+                        Log.d(TAG, "User found for bus: " + user.getId() + " " + user.getStatus());
+
+//                        int numberOfStationsUntilSelectedStation = bus.getStationsFromFirstStation().subList(bus.getStationsFromFirstStation().indexOf(closestStationName), bus.getStationsFromFirstStation().indexOf(selectedStation)).size();
+//                        Log.d(TAG, "User found for bus: " + numberOfStationsUntilSelectedStation + " stations away");
+
+
+                        if (currentDirection.equals("0")) {
+                            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                                if (bus.getStationsFromFirstStation().contains(entry.getKey())) {
+                                    Location locationStation2 = new Location("");
+                                    locationStation2.setLatitude(entry.getValue().getLatitude());
+                                    locationStation2.setLongitude(entry.getValue().getLongitude());
+
+                                    if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
+                                        busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
+                                        busClosestStationName = entry.getKey();
+                                    }
+                                }
+                            }
+                        } else if(currentDirection.equals("1")) {
+                            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                                if (bus.getStationsFromLastStation().contains(entry.getKey())) {
+                                    Location locationStation2 = new Location("");
+                                    locationStation2.setLatitude(entry.getValue().getLatitude());
+                                    locationStation2.setLongitude(entry.getValue().getLongitude());
+
+                                    if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
+                                        busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
+                                        busClosestStationName = entry.getKey();
+                                    }
+                                }
+                            }
+                        }
+
+
+                        Log.d(TAG, "closest station: " + busClosestStationName + " distance: " + busDistanceToItsClosestStation);
+
+//                        int numberOfStationsUntilSelectedStation = bus.getStationsFromFirstStation().subList(bus.getStationsFromFirstStation().indexOf(busClosestStationName), bus.getStationsFromFirstStation().indexOf(selectedStation)).size();
+
+                        comesInCalc = selectedStationLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
+                        Log.d(TAG, "realtimeshit: " + selectedStationLocation.distanceTo(busLocation) + " meters, speed: " + speedIsXMetersPerMinute);
+                        Log.d(TAG, "realtimeshit: " + selectedStationLocation.getLatitude() + ", " + selectedStationLocation.getLongitude() + "  -  " + busLocation.getLatitude() + ", " + busLocation.getLongitude());
+                        comesIn = "Arrives in approximately " + String.valueOf(Math.round(comesInCalc)) + " minutes.";
+//                        comesIn = "Arrives in approximately " + String.valueOf(Math.round(comesInCalc + numberOfStationsUntilSelectedStation)) + " minutes.";
+
+
+                        listedBusData.add(new ListedBusData(bus, "Found!", comesIn));
+                    }
+                }
+
+                /*
+                    Approximately which bus should
+                    come based on the program
+                 */
+
+                String[] splitTime;
+
+                if (currentDirection.equals("0") && !(selectedStation.equals(bus.getFirstStationName())) || bus.getStationsFromFirstStation().contains(selectedStation)) {
+
+                    ArrayList<String> hours = new ArrayList<>();
+                    ArrayList<String> minutes = new ArrayList<>();
+
+                    HashMap<String, String> hoursAndMinutes = new HashMap<>();
+
+                    for (String time : bus.getFirstStationLeavingTime()) {
+                        splitTime = time.split(":");
+                        hoursAndMinutes.put(splitTime[0], splitTime[1]);
+                    }
+
+                    for (Map.Entry<String, String> entry : hoursAndMinutes.entrySet()) {
+                        String hour = entry.getKey();
+                        String minute = entry.getValue();
+                        Log.d(TAG, "time list current value: " + hour + ":" + minute + " difference with current: " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes.");
+
+                        if (Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) <= 40) {
+                            if (currentHour * 60 + currentMin > Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                comesIn = "Left " + bus.getFirstStationName() + " station " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes ago.";
+                            } else if (currentHour * 60 + currentMin <= Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                if (currentHour * 60 + currentMin == Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                    comesIn = "Leaves " + bus.getFirstStationName() + " station " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " right now.";
+                                } else {
+                                    comesIn = "Leaves " + bus.getFirstStationName() + " in " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes.";
+                                }
+                            }
+                            listedBusData.add(new ListedBusData(bus, realTimeBusData, comesIn));
+                        }
+
+                    }
+
+                } else if (currentDirection.equals("1") && !(selectedStation.equals(bus.getLastStationName())) || bus.getStationsFromLastStation().contains(selectedStation)) {
+
+                    ArrayList<String> hours = new ArrayList<>();
+                    ArrayList<String> minutes = new ArrayList<>();
+
+                    HashMap<String, String> hoursAndMinutes = new HashMap<>();
+
+                    for (String time : bus.getFirstStationLeavingTime()) {
+                        splitTime = time.split(":");
+                        hoursAndMinutes.put(splitTime[0], splitTime[1]);
+                    }
+
+                    for (Map.Entry<String, String> entry : hoursAndMinutes.entrySet()) {
+                        String hour = entry.getKey();
+                        String minute = entry.getValue();
+                        Log.d(TAG, "time list current value: " + hour + ":" + minute + " difference with current: " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes.");
+
+                        if (Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) <= 40) {
+                            if (currentHour * 60 + currentMin > Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                comesIn = "Left " + bus.getFirstStationName() + " station " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes ago.";
+                            } else if (currentHour * 60 + currentMin <= Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                if (currentHour * 60 + currentMin == Integer.valueOf(hour) * 60 + Integer.valueOf(minute)) {
+                                    comesIn = "Leaves " + bus.getFirstStationName() + " station " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " right now.";
+                                } else {
+                                    comesIn = "Leaves " + bus.getFirstStationName() + " in " + Math.abs(Math.abs(currentHour - Integer.valueOf(hour)) * 60 - Math.abs(currentMin - Integer.valueOf(minute))) + " minutes.";
+                                }
+                            }
+                            listedBusData.add(new ListedBusData(bus, realTimeBusData, comesIn));
+                        }
+
+                    }
+                }
             }
+
+            dialog.getWindow().setLayout(Toolbar.LayoutParams.MATCH_PARENT, Toolbar.LayoutParams.MATCH_PARENT);
 
             ListView listView;
 

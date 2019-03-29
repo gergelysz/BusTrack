@@ -3,7 +3,7 @@ package bustracker.ms.sapientia.ro.bustrack.Data;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Bus extends User {
+public class Bus  {
 
     private String number;
     private String firstStationName;
@@ -14,8 +14,7 @@ public class Bus extends User {
     private List<String> stationsFromFirstStation = new ArrayList<>();
     private List<String> stationsFromLastStation = new ArrayList<>();
 
-
-    public Bus() {
+    Bus() {
     }
 
     public String getNumber() {
@@ -81,4 +80,6 @@ public class Bus extends User {
     public void setStationsFromLastStation(List<String> stationsFromLastStation) {
         this.stationsFromLastStation = stationsFromLastStation;
     }
+
+
 }

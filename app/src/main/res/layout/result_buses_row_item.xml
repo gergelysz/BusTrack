@@ -2,8 +2,9 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:minWidth="400dp"
     android:background="@color/darkerdarkgray"
     android:padding="12dp">
 
@@ -38,6 +39,7 @@
         android:id="@+id/textView_result_bus_comesIn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:lines="2"
         android:text="Comes in 10 minutes."
         android:fontFamily="@font/modernsans"
         android:textColor="@color/white"

@@ -1,87 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content"
+    android:background="@drawable/popup_style_set"
+    android:padding="16dp">
 
-    <RelativeLayout
+    <TextView
+        android:id="@+id/editText_sab_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/modernsans"
+        android:text="@string/please_choose_your_current_status"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/image_status_waiting_for_bus"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:contentDescription="@string/set_your_status_to_waiting_for_bus_other_users_won_t_see_you"
+        android:focusable="true"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toLeftOf="@id/image_status_on_bus"
+        app:layout_constraintTop_toBottomOf="@id/editText_sab_status"
+        app:srcCompat="@drawable/ic_waiting_for_bus" />
+
+    <ImageView
+        android:id="@+id/image_status_on_bus"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:contentDescription="@string/set_your_status_to_waiting_for_bus_other_users_won_t_see_you"
+        android:focusable="true"
+        app:layout_constraintLeft_toRightOf="@id/image_status_waiting_for_bus"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/editText_sab_status"
+        app:srcCompat="@drawable/ic_bus" />
+
+    <TextView
+        android:id="@+id/editText_sab_selectBus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:fontFamily="@font/modernsans"
+        android:text="@string/please_choose_your_current_bus"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/image_status_waiting_for_bus" />
+
+    <Spinner
+        android:id="@+id/spinner_statAndBus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:background="@drawable/popup_style_set"
-        android:padding="12dp"
-        tools:ignore="UselessParent">
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/white"
+        android:fontFamily="@font/modernsans"
+        android:popupBackground="@color/white"
+        app:layout_constraintTop_toBottomOf="@id/editText_sab_selectBus"
+        tools:targetApi="lollipop" />
 
-        <TextView
-            android:id="@+id/editText_sab_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/modernsans"
-            android:text="@string/please_choose_your_current_status"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
+    <Button
+        android:id="@+id/button_apply_status_and_bus"
+        android:layout_width="52dp"
+        android:layout_height="32dp"
+        android:background="@color/darkergray"
+        android:fontFamily="@font/modernsans"
+        android:text="@string/apply"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/spinner_statAndBus" />
 
-        <RadioGroup
-            android:id="@+id/radioGroup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/editText_sab_status"
-            android:layout_marginTop="8dp">
-
-            <RadioButton
-                android:id="@+id/radioButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/modernsans"
-                android:text="@string/on_bus"
-                android:textColor="@color/white"
-                android:textSize="12sp" />
-
-            <RadioButton
-                android:id="@+id/radioButton2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/modernsans"
-                android:text="@string/waiting_for_bus"
-                android:textColor="@color/white"
-                android:textSize="12sp" />
-
-        </RadioGroup>
-
-        <TextView
-            android:id="@+id/editText_sab_selectBus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/radioGroup"
-            android:layout_marginTop="20dp"
-            android:fontFamily="@font/modernsans"
-            android:text="@string/please_choose_your_current_bus"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
-
-        <Spinner
-            android:id="@+id/spinner_statAndBus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/editText_sab_selectBus"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="@color/white"
-            android:fontFamily="@font/modernsans"
-            android:popupBackground="@color/white"
-            tools:targetApi="lollipop" />
-
-        <Button
-            android:id="@+id/button_apply_status_and_bus"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_below="@+id/spinner_statAndBus"
-            android:layout_centerHorizontal="true"
-            android:background="@color/darkergray"
-            android:fontFamily="@font/modernsans"
-            android:text="@string/apply"
-            android:textColor="@color/white"
-            android:textSize="12sp" />
-
-    </RelativeLayout>
-</RelativeLayout>
+</android.support.constraint.ConstraintLayout>

@@ -39,7 +39,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
 
         // Populate the data into the template view using the data object
         assert listedBusData != null;
-        textViewBusNumber.setText(listedBusData.getBusNumber());
+        textViewBusNumber.setText(listedBusData.getBus().getNumber());
         textViewRealTimeBusData.setText(listedBusData.getRealTimeBusData());
         textViewBusComesIn.setText(listedBusData.getComesInMinutes());
 

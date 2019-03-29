@@ -2,7 +2,7 @@ package bustracker.ms.sapientia.ro.bustrack.Data;
 
 import com.google.firebase.Timestamp;
 
-public class User {
+public class User  {
 
     private String id;
     private String bus;
@@ -10,6 +10,7 @@ public class User {
     private Timestamp timestamp;
     private String latitude;
     private String longitude;
+    private String direction;
 
     User() {
     }
@@ -35,6 +36,25 @@ public class User {
         this.timestamp = timestamp;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    public User(String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction) {
+        this.bus = bus;
+        this.status = status;
+        this.timestamp = timestamp;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.direction = direction;
+    }
+
+    public User(String id, String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction) {
+        this.id = id;
+        this.bus = bus;
+        this.status = status;
+        this.timestamp = timestamp;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.direction = direction;
     }
 
     public String getId() {
@@ -83,5 +103,14 @@ public class User {
 
     public void setLongitude(String longitude) {
         this.longitude = longitude;
+    }
+
+    public String getDirection() {
+
+        return direction;
+    }
+
+    public void setDirection(String direction) {
+        this.direction = direction;
     }
 }

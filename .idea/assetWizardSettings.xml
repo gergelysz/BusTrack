@@ -170,7 +170,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="jar:file:/home/gergelysz/Documents/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/device/ic_battery_std_black_24dp.xml" />
+                                      <entry key="url" value="jar:file:/home/gergelysz/Documents/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/action/ic_accessibility_black_24dp.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -181,8 +181,8 @@
                         <option name="values">
                           <map>
                             <entry key="assetSourceType" value="FILE" />
-                            <entry key="outputName" value="ic_bus_station_white" />
-                            <entry key="sourceFile" value="$USER_HOME$/Desktop/7551f9d89c.svg" />
+                            <entry key="outputName" value="ic_waiting_for_bus" />
+                            <entry key="sourceFile" value="$USER_HOME$/Desktop/standing-up-man-svgrepo-com.svg" />
                           </map>
                         </option>
                       </PersistentState>
