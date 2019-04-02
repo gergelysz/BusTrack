@@ -15,7 +15,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="AllowBackup,GoogleAppIndexingWarning">
-        <activity android:name=".Activities.SettingsActivity"
+        <activity
+            android:name=".Activities.SettingsActivity"
             tools:ignore="InnerclassSeparator" />
         <activity
             android:name=".Activities.MainActivity"

@@ -3,14 +3,16 @@ package bustracker.ms.sapientia.ro.bustrack.Data;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Bus  {
+public class Bus {
 
     private String number;
     private String firstStationName;
     private String lastStationName;
-    private List<String> stations = new ArrayList<>();
+//    private List<String> stations = new ArrayList<>();
     private List<String> firstStationLeavingTime = new ArrayList<>();
     private List<String> lastStationLeavingTime = new ArrayList<>();
+    private List<String> firstStationLeavingTimeWeekend = new ArrayList<>();
+    private List<String> lastStationLeavingTimeWeekend = new ArrayList<>();
     private List<String> stationsFromFirstStation = new ArrayList<>();
     private List<String> stationsFromLastStation = new ArrayList<>();
 
@@ -41,13 +43,13 @@ public class Bus  {
         this.lastStationName = lastStationName;
     }
 
-    public List<String> getStations() {
-        return stations;
-    }
-
-    public void setStations(List<String> stations) {
-        this.stations = stations;
-    }
+//    public List<String> getStations() {
+//        return stations;
+//    }
+//
+//    public void setStations(List<String> stations) {
+//        this.stations = stations;
+//    }
 
     public List<String> getFirstStationLeavingTime() {
         return firstStationLeavingTime;
@@ -63,6 +65,22 @@ public class Bus  {
 
     public void setLastStationLeavingTime(List<String> lastStationLeavingTime) {
         this.lastStationLeavingTime = lastStationLeavingTime;
+    }
+
+    public List<String> getFirstStationLeavingTimeWeekend() {
+        return firstStationLeavingTimeWeekend;
+    }
+
+    public void setFirstStationLeavingTimeWeekend(List<String> firstStationLeavingTimeWeekend) {
+        this.firstStationLeavingTimeWeekend = firstStationLeavingTimeWeekend;
+    }
+
+    public List<String> getLastStationLeavingTimeWeekend() {
+        return lastStationLeavingTimeWeekend;
+    }
+
+    public void setLastStationLeavingTimeWeekend(List<String> lastStationLeavingTimeWeekend) {
+        this.lastStationLeavingTimeWeekend = lastStationLeavingTimeWeekend;
     }
 
     public List<String> getStationsFromFirstStation() {

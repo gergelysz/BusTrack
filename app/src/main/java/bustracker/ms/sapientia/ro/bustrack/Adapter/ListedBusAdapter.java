@@ -1,6 +1,7 @@
 package bustracker.ms.sapientia.ro.bustrack.Adapter;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,7 @@ import android.widget.TextView;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.R;
@@ -39,7 +41,21 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
 
         // Populate the data into the template view using the data object
         assert listedBusData != null;
+        Calendar calendar = Calendar.getInstance();
+
+        if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            textViewBusNumber.setTextColor(Color.BLUE);
+        }
+        else {
+            textViewBusNumber.setTextColor(Color.WHITE);
+        }
         textViewBusNumber.setText(listedBusData.getBus().getNumber());
+        if(listedBusData.getRealTimeBusData().equals("Found!")) {
+            textViewRealTimeBusData.setTextColor(Color.GREEN);
+        } else {
+            textViewRealTimeBusData.setTextColor(Color.WHITE);
+        }
         textViewRealTimeBusData.setText(listedBusData.getRealTimeBusData());
         textViewBusComesIn.setText(listedBusData.getComesInMinutes());
 

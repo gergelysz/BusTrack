@@ -45,10 +45,10 @@
                                   <option name="values">
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Desktop/7551f9d89c.svg" />
-                                      <entry key="outputName" value="ic_bus_station_light" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Desktop/airport-bus-svgrepo-com.svg" />
+                                      <entry key="outputName" value="ic_user_bus" />
                                       <entry key="theme" value="CUSTOM" />
-                                      <entry key="themeColor" value="000000" />
+                                      <entry key="themeColor" value="04d156" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -181,8 +181,8 @@
                         <option name="values">
                           <map>
                             <entry key="assetSourceType" value="FILE" />
-                            <entry key="outputName" value="ic_waiting_for_bus" />
-                            <entry key="sourceFile" value="$USER_HOME$/Desktop/standing-up-man-svgrepo-com.svg" />
+                            <entry key="outputName" value="ic_user_bus" />
+                            <entry key="sourceFile" value="$USER_HOME$/Desktop/airport-bus-svgrepo-com.svg" />
                           </map>
                         </option>
                       </PersistentState>
