@@ -41,11 +41,9 @@ public class SettingsFragment extends PreferenceFragment {
                     }
                     break;
                 case UPDATE_FREQUENCY:
-//                    Toast.makeText(getActivity(), sharedPreferences.getString(UPDATE_FREQUENCY, "5000"), Toast.LENGTH_SHORT).show();
                     Toast.makeText(getActivity(), "You'll need to restart the app for the changes to work.", Toast.LENGTH_SHORT).show();
                     break;
                 case UPDATE_PRIORITY:
-//                    Toast.makeText(getActivity(), sharedPreferences.getString(UPDATE_PRIORITY, "0"), Toast.LENGTH_SHORT).show();
                     Toast.makeText(getActivity(), "You'll need to restart the app for the changes to work.", Toast.LENGTH_SHORT).show();
                     break;
             }

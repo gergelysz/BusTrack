@@ -8,7 +8,6 @@ public class Bus {
     private String number;
     private String firstStationName;
     private String lastStationName;
-//    private List<String> stations = new ArrayList<>();
     private List<String> firstStationLeavingTime = new ArrayList<>();
     private List<String> lastStationLeavingTime = new ArrayList<>();
     private List<String> firstStationLeavingTimeWeekend = new ArrayList<>();
@@ -42,14 +41,6 @@ public class Bus {
     public void setLastStationName(String lastStationName) {
         this.lastStationName = lastStationName;
     }
-
-//    public List<String> getStations() {
-//        return stations;
-//    }
-//
-//    public void setStations(List<String> stations) {
-//        this.stations = stations;
-//    }
 
     public List<String> getFirstStationLeavingTime() {
         return firstStationLeavingTime;
