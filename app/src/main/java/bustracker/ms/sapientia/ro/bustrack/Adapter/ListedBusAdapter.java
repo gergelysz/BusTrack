@@ -1,5 +1,6 @@
 package bustracker.ms.sapientia.ro.bustrack.Adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -22,6 +23,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         super(context, 0, listedBuses);
     }
 
+    @SuppressLint("SetTextI18n")
     @NotNull
     @Override
     public View getView(int position, View convertView, @NotNull ViewGroup parent) {
@@ -43,21 +45,46 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         assert listedBusData != null;
         Calendar calendar = Calendar.getInstance();
 
-        if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+        if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
                 calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
             textViewBusNumber.setTextColor(Color.BLUE);
-        }
-        else {
+        } else {
             textViewBusNumber.setTextColor(Color.WHITE);
         }
         textViewBusNumber.setText(listedBusData.getBus().getNumber());
-        if(listedBusData.getRealTimeBusData().equals("Found!")) {
+//        if(listedBusData.getRealTimeBusData().equals("Found!")) {
+        if (listedBusData.isRealTime()) {
             textViewRealTimeBusData.setTextColor(Color.GREEN);
+            textViewRealTimeBusData.setText(getContext().getString(R.string.real_time_bus_found));
         } else {
             textViewRealTimeBusData.setTextColor(Color.WHITE);
+            textViewRealTimeBusData.setText(getContext().getString(R.string.no_real_time_bus_found));
+
+            int comesInAbs = Math.abs(listedBusData.getComesInMin());
+
+            if (listedBusData.getComesInMin() < 0) {
+                if(listedBusData.getDirection() == 0) {
+                    textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation in " + comesInAbs + " minutes.");
+                } else {
+                    textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation in " + comesInAbs + " minutes.");
+                }
+            } else {
+                if(listedBusData.getComesInMin() == 0) {
+                    if(listedBusData.getDirection() == 0) {
+                        textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation right now.");
+                    } else {
+                        textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation right now.");
+                    }
+                } else {
+                    if(listedBusData.getDirection() == 0) {
+                        textViewBusComesIn.setText("Left " + listedBusData.getBus().getFirstStationName() + "\nstation " + comesInAbs + " minutes ago.");
+                    } else {
+                        textViewBusComesIn.setText("Left " + listedBusData.getBus().getLastStationName() + "\nstation " + comesInAbs + " minutes ago.");
+                    }
+                }
+            }
         }
-        textViewRealTimeBusData.setText(listedBusData.getRealTimeBusData());
-        textViewBusComesIn.setText(listedBusData.getComesInMinutes());
+
 
         // Return the completed view to render on screen
         return convertView;

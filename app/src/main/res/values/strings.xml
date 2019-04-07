@@ -64,6 +64,8 @@
     <string name="info_for_bus">Info for bus:</string>
     <string name="arrives_in">Arrives in</string>
     <string name="get_to_this_station">Get to this station:</string>
+    <string name="real_time_bus_found">Real-time bus found!</string>
+    <string name="no_real_time_bus_found">No real-time bus found!</string>
     <string-array name="update_frequency_options">
         <item>Fastest</item>
         <item>5 seconds</item>
