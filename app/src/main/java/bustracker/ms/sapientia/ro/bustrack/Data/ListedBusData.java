@@ -1,6 +1,8 @@
 package bustracker.ms.sapientia.ro.bustrack.Data;
 
-public class ListedBusData extends Bus {
+import java.io.Serializable;
+
+public class ListedBusData extends Bus implements Serializable {
 
     private Bus bus;
     //    private String realTimeBusData;

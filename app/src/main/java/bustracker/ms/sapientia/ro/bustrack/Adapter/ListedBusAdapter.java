@@ -23,6 +23,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         super(context, 0, listedBuses);
     }
 
+
     @SuppressLint("SetTextI18n")
     @NotNull
     @Override
@@ -52,7 +53,7 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
             textViewBusNumber.setTextColor(Color.WHITE);
         }
         textViewBusNumber.setText(listedBusData.getBus().getNumber());
-//        if(listedBusData.getRealTimeBusData().equals("Found!")) {
+
         if (listedBusData.isRealTime()) {
             textViewRealTimeBusData.setTextColor(Color.GREEN);
             textViewRealTimeBusData.setText(getContext().getString(R.string.real_time_bus_found));
@@ -63,20 +64,20 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
             int comesInAbs = Math.abs(listedBusData.getComesInMin());
 
             if (listedBusData.getComesInMin() < 0) {
-                if(listedBusData.getDirection() == 0) {
+                if (listedBusData.getDirection() == 0) {
                     textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation in " + comesInAbs + " minutes.");
                 } else {
                     textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation in " + comesInAbs + " minutes.");
                 }
             } else {
-                if(listedBusData.getComesInMin() == 0) {
-                    if(listedBusData.getDirection() == 0) {
+                if (listedBusData.getComesInMin() == 0) {
+                    if (listedBusData.getDirection() == 0) {
                         textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation right now.");
                     } else {
                         textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation right now.");
                     }
                 } else {
-                    if(listedBusData.getDirection() == 0) {
+                    if (listedBusData.getDirection() == 0) {
                         textViewBusComesIn.setText("Left " + listedBusData.getBus().getFirstStationName() + "\nstation " + comesInAbs + " minutes ago.");
                     } else {
                         textViewBusComesIn.setText("Left " + listedBusData.getBus().getLastStationName() + "\nstation " + comesInAbs + " minutes ago.");
@@ -84,7 +85,6 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
                 }
             }
         }
-
 
         // Return the completed view to render on screen
         return convertView;

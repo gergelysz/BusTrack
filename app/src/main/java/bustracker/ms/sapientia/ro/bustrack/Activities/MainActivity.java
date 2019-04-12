@@ -68,6 +68,7 @@ import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -82,6 +83,7 @@ import bustracker.ms.sapientia.ro.bustrack.Adapter.ListedBusAdapter;
 import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
+import bustracker.ms.sapientia.ro.bustrack.Fragments.ListedBusDetailsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -111,7 +113,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final List<String> userIds = new ArrayList<>();
     private Map<String, LatLng> stations = new HashMap<>();
-//    private Map<String, String> stations2 = null;
 
     private int UPDATE_INTERVAL;
     private int UPDATE_BATTERY;
@@ -252,8 +253,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 selectedStationRouting();
                 break;
             case R.id.nav_offline_bus_data:
-//                saveStationsOffline2();
-//                loadStationsOffline2();
                 break;
             case R.id.nav_change_statusAndBus:
                 statusAndBusSelectorLoader();
@@ -376,7 +375,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 15));
     }
 
-
     private static class MainActivityLocationCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
@@ -466,7 +464,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 activity.closestStationTextView.setText(activity.getResources().getString(R.string.closest_station) + " " + activity.closestStationName);
                 activity.speedTextView.setText(activity.getResources().getString(R.string.current_speed) + " " + location.getSpeed());
             }
-
 
             // Pass the new location to the Maps SDK's LocationComponent
             assert activity != null;
@@ -759,8 +756,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         final Spinner spinner = dialog.findViewById(R.id.spinner_statAndBus);
 
-        textView.setVisibility(View.INVISIBLE);
-        spinner.setVisibility(View.INVISIBLE);
+        textView.setVisibility(View.GONE);
+        spinner.setVisibility(View.GONE);
 
         Button applyButton = dialog.findViewById(R.id.button_apply_status_and_bus);
         applyButton.setVisibility(View.INVISIBLE);
@@ -1115,7 +1112,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 }
                                 Log.d(TAG, "listing: now(" + currentHour + ":" + currentMin + ") bus time(" + splitTime[0] + ":" + splitTime[1] + "comesInData:(" + comesIn + ")" + entry.getKey().getNumber() + " minutediff: " + minuteDifference);
 
-//                                listedBusData.add(new ListedBusData(entry.getKey(), "No real-time bus found!", comesIn, 0, comesInMin));
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 0, comesInMin));
                                 Log.d(TAG, "listedBusData added: " + entry.getKey().getNumber());
                             }
@@ -1153,9 +1149,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         comesIn = "Leaves " + entry.getKey().getLastStationName() + " in " + minuteDifference + " minutes.";
                                     }
                                 }
-//                                listedBusData.add(new ListedBusData(entry.getKey(), "No real-time bus found!", comesIn, 1, comesInMin));
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
-
                             }
                         }
                     }
@@ -1178,9 +1172,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         comesIn = "Leaves " + entry.getKey().getFirstStationName() + " in " + minuteDifference + " minutes.";
                                     }
                                 }
-//                                listedBusData.add(new ListedBusData(entry.getKey(), "No real-time bus found!", comesIn, 0, comesInMin));
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
-
                             }
                         }
                     }
@@ -1202,6 +1194,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 listView.setOnItemClickListener((parent, view, position, id) -> {
 
+                    ListedBusDetailsFragment listedBusDetailsFragment = new ListedBusDetailsFragment();
+
                     // If the user clicked on the real-time bus
                     if (Objects.requireNonNull(listedBusAdapter.getItem(position)).getUser() != null) {
                         Location userLoc = new Location("");
@@ -1210,117 +1204,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         setCameraPosition(userLoc);
                         dialog.cancel();
                     }
-                    // Else display estimated information about the bus
+                    // Else display DialogFragment with estimated information about the bus
                     else {
-                        Dialog infoDialog = new Dialog(MainActivity.this);
-                        Objects.requireNonNull(infoDialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
-                        infoDialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
-                        infoDialog.setContentView(R.layout.result_buses_row_clicked);
-                        infoDialog.setCancelable(true);
+                        Bundle bundle = new Bundle();
+                        bundle.putSerializable("listedBusAdapter", listedBusAdapter.getItem(position));
+                        bundle.putString("latitude", latitude);
+                        bundle.putString("longitude", longitude);
+                        bundle.putString("closestStationName", closestStationName);
+                        bundle.putString("closestStationName2", closestStationName2);
+                        bundle.putString("selectedStation", selectedStation);
+                        bundle.putSerializable("stations", (Serializable) stations);
+                        listedBusDetailsFragment.setArguments(bundle);
 
-                        TextView textViewInfoForBus = infoDialog.findViewById(R.id.textView_result_buses_clicked_info_for_bus);
-                        TextView textViewArrivesIn = infoDialog.findViewById(R.id.textView_result_buses_clicked_arrives_in);
-                        TextView textViewClosestStationArrive = infoDialog.findViewById(R.id.textView_result_buses_clicked_closest_station_arrive);
-
-                        textViewInfoForBus.setText("Info for bus: " + Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getNumber());
-
-                        // Calculate arrival
-
-                        int startIndex = 0;
-                        int endIndex = 0;
-                        int numberOfStationsBetween = 0;
-                        float comesInAround = 0;
-
-                        // TODO
-
-                        if (Objects.requireNonNull(listedBusAdapter.getItem(position)).getDirection() == 0) {
-
-                            for (String string : Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromFirstStation()) {
-                                if (string.equals(closestStationName) || string.equals(closestStationName2)) {
-                                    startIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromFirstStation().indexOf(string);
-                                }
-                                if (string.equals(selectedStation)) {
-                                    endIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromFirstStation().indexOf(string);
-                                }
-                            }
-
-                            if (endIndex == 0) {
-                                endIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromFirstStation().size() - 1;
-                            }
-
-                            numberOfStationsBetween = endIndex - startIndex;
-
-                            Location busLocation = new Location("");
-                            busLocation.setLatitude(Objects.requireNonNull(stations.get(Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getFirstStationName())).getLatitude());
-                            busLocation.setLongitude(Objects.requireNonNull(stations.get(Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getFirstStationName())).getLongitude());
-
-                            Location currentLocation = new Location("");
-                            currentLocation.setLatitude(Double.parseDouble(latitude));
-                            currentLocation.setLongitude(Double.parseDouble(longitude));
-                            comesInAround = currentLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
-
-                            // Bus already left
-                            if (listedBusAdapter.getItem(position).getComesInMin() > 0) {
-                                if (listedBusAdapter.getItem(position).getComesInMin() - numberOfStationsBetween - Math.round(comesInAround) <= 0) {
-//                                    textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusAdapter.getItem(position).getComesInMin()) - numberOfStationsBetween - Math.round(comesInAround)) + " minutes.");
-                                    textViewArrivesIn.setText("Arrives in " + Math.abs(Math.abs(listedBusAdapter.getItem(position).getComesInMin()) - numberOfStationsBetween - Math.round(comesInAround)) + " minutes.");
-                                    Log.d(TAG, "arrivesin: stationsBetween" + numberOfStationsBetween + " comesInAround: " + comesInAround + " comesinMin: " + Math.abs(listedBusAdapter.getItem(position).getComesInMin()));
-                                } else {
-                                    textViewArrivesIn.setText("Probably left.");
-                                }
-                            }
-                            // Bus will leave sometime
-                            else if (listedBusAdapter.getItem(position).getComesInMin() < 0) {
-                                textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusAdapter.getItem(position).getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
-                            }
-
-
-                        } else {
-
-                            for (String string : Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromLastStation()) {
-                                if (string.equals(closestStationName) || string.equals(closestStationName2)) {
-                                    startIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromLastStation().indexOf(string);
-                                }
-                                if (string.equals(selectedStation)) {
-                                    endIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromLastStation().indexOf(string);
-                                }
-                            }
-
-                            if (endIndex == 0) {
-                                endIndex = Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getStationsFromLastStation().size() - 1;
-                            }
-
-                            numberOfStationsBetween = endIndex - startIndex;
-
-                            Location busLocation = new Location("");
-                            busLocation.setLatitude(Objects.requireNonNull(stations.get(Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getLastStationName())).getLatitude());
-                            busLocation.setLongitude(Objects.requireNonNull(stations.get(Objects.requireNonNull(listedBusAdapter.getItem(position)).getBus().getLastStationName())).getLongitude());
-
-                            Location currentLocation = new Location("");
-                            currentLocation.setLatitude(Double.parseDouble(latitude));
-                            currentLocation.setLongitude(Double.parseDouble(longitude));
-                            comesInAround = currentLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
-
-                            // Bus already left
-                            if (listedBusAdapter.getItem(position).getComesInMin() > 0) {
-                                if (listedBusAdapter.getItem(position).getComesInMin() - numberOfStationsBetween - Math.round(comesInAround) <= 0) {
-                                    textViewArrivesIn.setText("Arrives in " + Math.abs(Math.abs(listedBusAdapter.getItem(position).getComesInMin()) - numberOfStationsBetween - Math.round(comesInAround)) + " minutes.");
-                                    Log.d(TAG, "arrivesin: stationsBetween" + numberOfStationsBetween + " comesInAround: " + comesInAround + " comesinMin: " + Math.abs(listedBusAdapter.getItem(position).getComesInMin()));
-                                } else {
-                                    textViewArrivesIn.setText("Probably left.");
-                                }
-                            }
-                            // Bus will leave sometime
-                            else if (listedBusAdapter.getItem(position).getComesInMin() < 0) {
-                                textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusAdapter.getItem(position).getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
-                            }
-
-                        }
-                        infoDialog.show();
+                        listedBusDetailsFragment.show(getSupportFragmentManager(), "ListedBusDetailsFragment");
                     }
                 });
             }
-
         });
 
         dialog.show();
