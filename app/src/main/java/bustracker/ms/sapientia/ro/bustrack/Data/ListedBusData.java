@@ -5,8 +5,6 @@ import java.io.Serializable;
 public class ListedBusData extends Bus implements Serializable {
 
     private Bus bus;
-    //    private String realTimeBusData;
-//    private String comesInMinutes;
     private boolean realTime;
     private int direction;
     private int comesInMin;
@@ -34,22 +32,6 @@ public class ListedBusData extends Bus implements Serializable {
     public void setBus(Bus bus) {
         this.bus = bus;
     }
-
-//    public String getRealTimeBusData() {
-//        return realTimeBusData;
-//    }
-//
-//    public void setRealTimeBusData(String realTimeBusData) {
-//        this.realTimeBusData = realTimeBusData;
-//    }
-//
-//    public String getComesInMinutes() {
-//        return comesInMinutes;
-//    }
-//
-//    public void setComesInMinutes(String comesInMinutes) {
-//        this.comesInMinutes = comesInMinutes;
-//    }
 
     public int getDirection() {
         return direction;

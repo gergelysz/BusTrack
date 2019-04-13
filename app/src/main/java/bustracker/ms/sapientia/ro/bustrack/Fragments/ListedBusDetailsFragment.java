@@ -2,9 +2,11 @@ package bustracker.ms.sapientia.ro.bustrack.Fragments;
 
 
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
@@ -38,6 +40,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
+
 /**
  * A simple {@link Fragment} subclass.
  */
@@ -47,6 +51,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
     private MapView mapViewListedRouteForUser;
+    private LatLng destinationPoint = new LatLng();
 
     public ListedBusDetailsFragment() {
         // Required empty public constructor
@@ -64,10 +69,11 @@ public class ListedBusDetailsFragment extends DialogFragment {
         TextView textViewArrivesIn = view.findViewById(R.id.textView_result_buses_clicked_arrives_in);
 
         assert getArguments() != null;
+
         ListedBusData listedBusData = (ListedBusData) getArguments().getSerializable("listedBusAdapter");
+        assert listedBusData != null;
 
         Map<String, LatLng> stations = (Map<String, LatLng>) getArguments().getSerializable("stations");
-
         assert stations != null;
 
         String latitude = getArguments().getString("latitude");
@@ -75,16 +81,19 @@ public class ListedBusDetailsFragment extends DialogFragment {
         assert latitude != null;
         assert longitude != null;
 
-        String closestStationName = getArguments().getString("closestStationName");
-        String closestStationName2 = getArguments().getString("closestStationName2");
-        assert closestStationName != null;
-        assert closestStationName2 != null;
-
         String selectedStation = getArguments().getString("selectedStation");
         assert selectedStation != null;
-        assert listedBusData != null;
 
         textViewInfoForBus.setText("Info for bus: " + listedBusData.getBus().getNumber());
+
+        LatLng closest = new LatLng();
+        Location locationStation = new Location("");
+        Location locationHere = new Location("");
+        locationHere.setLatitude(Double.parseDouble(latitude));
+        locationHere.setLongitude(Double.parseDouble(longitude));
+        float distance = 20000;
+        String closestStationName = "";
+
 
         // Calculate arrival
 
@@ -93,10 +102,25 @@ public class ListedBusDetailsFragment extends DialogFragment {
         int numberOfStationsBetween;
         float comesInAround;
 
+        // From first stations to last
         if (listedBusData.getDirection() == 0) {
 
+            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                // If bus goes through that station
+                if (listedBusData.getBus().getStationsFromFirstStation().contains(entry.getKey())) {
+                    locationStation.setLatitude(entry.getValue().getLatitude());
+                    locationStation.setLongitude(entry.getValue().getLongitude());
+                    if (locationHere.distanceTo(locationStation) < distance) {
+                        closestStationName = entry.getKey();
+                        distance = locationHere.distanceTo(locationStation);
+                        closest.setLatitude(entry.getValue().getLatitude());
+                        closest.setLongitude(entry.getValue().getLongitude());
+                    }
+                }
+            }
+
             for (String string : listedBusData.getBus().getStationsFromFirstStation()) {
-                if (string.equals(closestStationName) || string.equals(closestStationName2)) {
+                if (string.equals(closestStationName)) {
                     startIndex = listedBusData.getBus().getStationsFromFirstStation().indexOf(string);
                 }
                 if (string.equals(selectedStation)) {
@@ -114,10 +138,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
             busLocation.setLatitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getFirstStationName())).getLatitude());
             busLocation.setLongitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getFirstStationName())).getLongitude());
 
-            Location currentLocation = new Location("");
-            currentLocation.setLatitude(Double.parseDouble(latitude));
-            currentLocation.setLongitude(Double.parseDouble(longitude));
-            comesInAround = currentLocation.distanceTo(busLocation) / 500; // speedIsXPerMinute
+            comesInAround = locationHere.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute
 
             // Bus already left
             if (listedBusData.getComesInMin() > 0) {
@@ -133,10 +154,26 @@ public class ListedBusDetailsFragment extends DialogFragment {
             }
 
 
-        } else {
+        }
+        // From last station to first
+        else {
+
+            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                // If bus goes through that station
+                if (listedBusData.getBus().getStationsFromLastStation().contains(entry.getKey())) {
+                    locationStation.setLatitude(entry.getValue().getLatitude());
+                    locationStation.setLongitude(entry.getValue().getLongitude());
+                    if (locationHere.distanceTo(locationStation) < distance) {
+                        closestStationName = entry.getKey();
+                        distance = locationHere.distanceTo(locationStation);
+                        closest.setLatitude(entry.getValue().getLatitude());
+                        closest.setLongitude(entry.getValue().getLongitude());
+                    }
+                }
+            }
 
             for (String string : listedBusData.getBus().getStationsFromLastStation()) {
-                if (string.equals(closestStationName) || string.equals(closestStationName2)) {
+                if (string.equals(closestStationName)) {
                     startIndex = listedBusData.getBus().getStationsFromLastStation().indexOf(string);
                 }
                 if (string.equals(selectedStation)) {
@@ -150,11 +187,11 @@ public class ListedBusDetailsFragment extends DialogFragment {
 
             numberOfStationsBetween = endIndex - startIndex;
 
-            Location busLocation = new Location("asd");
+            Location busLocation = new Location("");
             busLocation.setLatitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getLastStationName())).getLatitude());
             busLocation.setLongitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getLastStationName())).getLongitude());
 
-            Location currentLocation = new Location("asd");
+            Location currentLocation = new Location("");
             currentLocation.setLatitude(Double.parseDouble(latitude));
             currentLocation.setLongitude(Double.parseDouble(longitude));
             comesInAround = currentLocation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute
@@ -171,63 +208,71 @@ public class ListedBusDetailsFragment extends DialogFragment {
             else if (listedBusData.getComesInMin() < 0) {
                 textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
             }
-
-            mapViewListedRouteForUser = view.findViewById(R.id.mapView2);
-            mapViewListedRouteForUser.onCreate(savedInstanceState);
-
-            mapViewListedRouteForUser.getMapAsync(mapboxMap -> mapboxMap.setStyle(Style.DARK, style -> {
-
-                // Map is set up and the style has loaded.
-                // Now you can add data or make other map adjustments
-
-                mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder()
-                                .target(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)))
-                                .zoom(16)
-                                .build()),
-                        1000);
-
-                assert Mapbox.getAccessToken() != null;
-                NavigationRoute.Builder builder = NavigationRoute.builder(getActivity())
-                        .accessToken(Mapbox.getAccessToken())
-                        .origin(Point.fromLngLat(Float.valueOf(longitude), Float.valueOf(latitude)))
-                        .destination(Point.fromLngLat(Objects.requireNonNull(stations.get(closestStationName)).getLongitude(), Objects.requireNonNull(stations.get(closestStationName)).getLatitude()))
-                        .profile(DirectionsCriteria.PROFILE_WALKING);
-
-                builder.build()
-                        .getRoute(new Callback<DirectionsResponse>() {
-                            @Override
-                            public void onResponse(@NonNull Call<DirectionsResponse> call, @NonNull Response<DirectionsResponse> response) {
-                                // You can get the generic HTTP info about the response
-                                // 200 = SUCCESS
-                                Log.d(TAG, "Response code: " + response.code());
-                                if (response.body() == null) {
-                                    Log.e(TAG, getString(R.string.no_routes_access_token));
-                                    return;
-                                } else if (response.body().routes().size() < 1) {
-                                    Log.e(TAG, getString(R.string.no_routes_found));
-                                    return;
-                                }
-
-                                currentRoute = response.body().routes().get(0);
-
-                                // Draw the route on the map
-                                if (navigationMapRoute != null) {
-                                    navigationMapRoute.updateRouteVisibilityTo(false);
-                                } else {
-                                    navigationMapRoute = new NavigationMapRoute(null, mapViewListedRouteForUser, mapboxMap, R.style.NavigationMapRoute);
-                                    Log.d(TAG, getString(R.string.route_configured));
-                                }
-                                navigationMapRoute.addRoute(currentRoute);
-                                Log.d(TAG, getString(R.string.route_added));
-                            }
-
-                            @Override
-                            public void onFailure(@NonNull Call<DirectionsResponse> call, @NonNull Throwable throwable) {
-                                Log.e(TAG, "Error: " + throwable.getMessage());
-                            }
-                        });
-            }));
         }
+
+        mapViewListedRouteForUser = view.findViewById(R.id.mapView2);
+        mapViewListedRouteForUser.onCreate(savedInstanceState);
+
+        mapViewListedRouteForUser.getMapAsync(mapboxMap -> {
+
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            if (sharedPreferences.getBoolean(DARK_MAP_THEME, true)) {
+                mapboxMap.setStyle(Style.DARK);
+            } else {
+                mapboxMap.setStyle(Style.LIGHT);
+            }
+
+            // Map is set up and the style has loaded.
+            // Now you can add data or make other map adjustments
+
+            mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder()
+                            .target(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)))
+                            .zoom(16)
+                            .build()),
+                    1000);
+
+            assert Mapbox.getAccessToken() != null;
+            NavigationRoute.Builder builder = NavigationRoute.builder(getActivity())
+                    .accessToken(Mapbox.getAccessToken())
+                    .origin(Point.fromLngLat(Float.valueOf(longitude), Float.valueOf(latitude)))
+                    .destination(Point.fromLngLat(closest.getLongitude(), closest.getLatitude()))
+                    .profile(DirectionsCriteria.PROFILE_WALKING);
+
+            builder.build()
+                    .getRoute(new Callback<DirectionsResponse>() {
+                        @Override
+                        public void onResponse(@NonNull Call<DirectionsResponse> call, @NonNull Response<DirectionsResponse> response) {
+                            // You can get the generic HTTP info about the response
+                            // 200 = SUCCESS
+                            Log.d(TAG, "Response code: " + response.code());
+                            if (response.body() == null) {
+                                Log.e(TAG, getString(R.string.no_routes_access_token));
+                                return;
+                            } else if (response.body().routes().size() < 1) {
+                                Log.e(TAG, getString(R.string.no_routes_found));
+                                return;
+                            }
+
+                            currentRoute = response.body().routes().get(0);
+
+                            // Draw the route on the map
+                            if (navigationMapRoute != null) {
+                                navigationMapRoute.updateRouteVisibilityTo(false);
+                            } else {
+                                navigationMapRoute = new NavigationMapRoute(null, mapViewListedRouteForUser, mapboxMap, R.style.NavigationMapRoute);
+                                Log.d(TAG, getString(R.string.route_configured));
+                            }
+                            navigationMapRoute.addRoute(currentRoute);
+                            Log.d(TAG, getString(R.string.route_added));
+                        }
+
+                        @Override
+                        public void onFailure(@NonNull Call<DirectionsResponse> call, @NonNull Throwable throwable) {
+                            Log.e(TAG, "Error: " + throwable.getMessage());
+                        }
+                    });
+        });
+
         return view;
     }
 

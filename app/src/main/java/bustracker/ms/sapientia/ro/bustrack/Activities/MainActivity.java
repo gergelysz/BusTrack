@@ -85,6 +85,7 @@ import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
 import bustracker.ms.sapientia.ro.bustrack.Fragments.ListedBusDetailsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
+import bustracker.ms.sapientia.ro.bustrack.Services.OnAppExitedHelperService;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -123,8 +124,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String longitude;
     private String currentBus = "0";
     private String currentStatus = "waiting for bus";
-    private String currentUserId = null;
+    public String currentUserId = null;
     private String currentDirection = "0";
+    private String currentSpeed = "0";
     private String selectedStation = "";
 
     private int beforeCurrentHour;
@@ -138,10 +140,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private TextView speedTextView;
     private TextView closestStationTextView;
     private TextView userStatusTextView;
+    private ImageView userStatusImageView;
 
     private double distanceToClosestStation = 2000000;
     private String closestStationName = "";
-    private String closestStationName2 = "";
 
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
@@ -155,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LocationEngine locationEngine;
     private final MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
 
-    private FirebaseFirestore firestoreDb;
+    public FirebaseFirestore firestoreDb;
 
     public MainActivity() {
     }
@@ -173,6 +175,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapView.onCreate(savedInstanceState);
 
         firestoreDb = FirebaseFirestore.getInstance();
+
+        //---------------------------------------------
+        Intent intent = new Intent(MainActivity.this, OnAppExitedHelperService.class);
+        startService(intent);
+        //---------------------------------------------
 
         mapView.getMapAsync(this);
 
@@ -206,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         closestStationTextView = headerView.findViewById(R.id.closest_station_nav_header);
         userIdTextView = headerView.findViewById(R.id.user_id_nav_header);
         speedTextView = headerView.findViewById(R.id.user_speed_nav_header);
+        userStatusImageView = headerView.findViewById(R.id.status_nav_image);
 
         navigationView.setNavigationItemSelectedListener(this);
     }
@@ -401,12 +409,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 Log.d(TAG, "getLastLocation: " + location.getLatitude() + " " + location.getLongitude());
 
-                if (!activity.firstLocationData) {
-                    // Create a Toast which displays the new location's coordinates
-                    Toast.makeText(activity, "New location: " + result.getLastLocation().getLatitude() + " " + result.getLastLocation().getLongitude(),
-                            Toast.LENGTH_SHORT).show();
-                }
-
                 activity.latitude = String.valueOf(location.getLatitude());
                 activity.longitude = String.valueOf(location.getLongitude());
 
@@ -428,6 +430,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     activity.currentUser.setTimestamp(Timestamp.now());
                     activity.currentUser.setId(activity.currentUserId);
                     activity.currentUser.setDirection(activity.currentDirection);
+                    activity.currentUser.setSpeed(activity.currentSpeed);
 
                     Log.d(TAG, "Current user updated data: " + activity.currentUser.getId() + " " + activity.currentUser.getBus() + " " + activity.currentUser.getStatus() + " " + activity.currentUser.getLatitude() + " " + activity.currentUser.getLongitude() + " " + activity.currentUser.getDirection());
 
@@ -453,16 +456,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     locationStation.setLongitude(entry.getValue().getLongitude());
 
                     if (activity.distanceToClosestStation > location.distanceTo(locationStation)) {
-                        activity.closestStationName2 = activity.closestStationName;
                         activity.distanceToClosestStation = location.distanceTo(locationStation);
                         activity.closestStationName = entry.getKey();
                     }
                 }
-
-                Log.d(TAG, "closest station: " + activity.closestStationName + " distance: " + activity.distanceToClosestStation);
-
                 activity.closestStationTextView.setText(activity.getResources().getString(R.string.closest_station) + " " + activity.closestStationName);
                 activity.speedTextView.setText(activity.getResources().getString(R.string.current_speed) + " " + location.getSpeed());
+                activity.currentSpeed = String.valueOf(location.getSpeed());
             }
 
             // Pass the new location to the Maps SDK's LocationComponent
@@ -595,7 +595,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
 
-        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection);
+        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
 
         userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
 
@@ -631,10 +631,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             documentSnapshot.getTimestamp("timestamp"),
                             documentSnapshot.getString("latitude"),
                             documentSnapshot.getString("longitude"),
-                            documentSnapshot.getString("direction")
+                            documentSnapshot.getString("direction"),
+                            documentSnapshot.getString("speed")
                     );
                     users.add(newUser);
-                    Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus());
+                    Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus() + " " + newUser.getSpeed());
                     if (newUser.getStatus().equals("on bus")) {
                         usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
                                 .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))
@@ -656,7 +657,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())));
                         usersMarkers.remove(documentSnapshot.getId());
                     }
-
                 }
             }
 
@@ -768,6 +768,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         imageWaitingForBus.setOnClickListener(v -> {
             currentStatus = "waiting for bus";
+            userStatusImageView.setImageResource(R.drawable.ic_waiting_for_bus);
             userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
             currentBus = "0";
             Snackbar.make(findViewById(R.id.mapView), R.string.successfully_updated, Snackbar.LENGTH_SHORT).show();
@@ -776,6 +777,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         imageOnBus.setOnClickListener(v -> {
             currentStatus = "on bus";
+            userStatusImageView.setImageResource(R.drawable.ic_bus);
             userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
             textView.setVisibility(View.VISIBLE);
             spinner.setVisibility(View.VISIBLE);
@@ -966,64 +968,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     if (user.getBus().equals(entry.getKey().getNumber())
                             && user.getStatus().equals("on bus")
-                            && user.getDirection().equals(currentDirection)) {
+                            && user.getDirection().equals(currentDirection)
+                    ) {
 
                         busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
                         busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
                         Log.d(TAG, "User found for bus: " + user.getId() + " " + user.getStatus());
-
-                        if (currentDirection.equals("0")) {
-                            for (Map.Entry<String, LatLng> entry2 : stations.entrySet()) {
-                                if (entry.getKey().getStationsFromFirstStation().contains(entry2.getKey())) {
-                                    if (entry.getKey().getStationsFromFirstStation().contains(closestStationName)) {
-                                        Location locationStation2 = new Location("");
-                                        locationStation2.setLatitude(Objects.requireNonNull(stations.get(closestStationName)).getLatitude());
-                                        locationStation2.setLongitude(Objects.requireNonNull(stations.get(closestStationName)).getLongitude());
-
-                                        if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
-                                            busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
-                                            busClosestStationName = entry2.getKey();
-                                        }
-                                    } else if (entry.getKey().getStationsFromFirstStation().contains(closestStationName2)) {
-                                        Location locationStation2 = new Location("");
-                                        locationStation2.setLatitude(Objects.requireNonNull(stations.get(closestStationName2)).getLatitude());
-                                        locationStation2.setLongitude(Objects.requireNonNull(stations.get(closestStationName2)).getLongitude());
-
-                                        if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
-                                            busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
-                                            busClosestStationName = entry2.getKey();
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (currentDirection.equals("1")) {
-                            for (Map.Entry<String, LatLng> entry2 : stations.entrySet()) {
-                                if (entry.getKey().getStationsFromLastStation().contains(entry2.getKey())) {
-                                    if (entry.getKey().getStationsFromLastStation().contains(closestStationName)) {
-                                        Location locationStation2 = new Location("");
-                                        locationStation2.setLatitude(Objects.requireNonNull(stations.get(closestStationName)).getLatitude());
-                                        locationStation2.setLongitude(Objects.requireNonNull(stations.get(closestStationName)).getLongitude());
-
-                                        if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
-                                            busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
-                                            busClosestStationName = entry2.getKey();
-                                        }
-                                    } else if (entry.getKey().getStationsFromLastStation().contains(closestStationName2)) {
-                                        Location locationStation2 = new Location("");
-                                        locationStation2.setLatitude(Objects.requireNonNull(stations.get(closestStationName2)).getLatitude());
-                                        locationStation2.setLongitude(Objects.requireNonNull(stations.get(closestStationName2)).getLongitude());
-
-                                        if (busDistanceToItsClosestStation > busLocation.distanceTo(locationStation2)) {
-                                            busDistanceToItsClosestStation = busLocation.distanceTo(locationStation2);
-                                            busClosestStationName = entry2.getKey();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Log.d(TAG, "closest station: " + busClosestStationName + " distance: " + busDistanceToItsClosestStation);
-                        Log.d(TAG, "closest station (to user): " + closestStationName + " or " + closestStationName2);
 
                         Location currentLocation = new Location("");
                         currentLocation.setLatitude(Double.parseDouble(latitude));
@@ -1034,7 +984,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Log.d(TAG, "realtimeshit: " + selectedStationLocation.getLatitude() + ", " + selectedStationLocation.getLongitude() + "  -  " + busLocation.getLatitude() + ", " + busLocation.getLongitude());
                         comesIn = "Arrives in approximately " + String.valueOf(Math.round(comesInCalc) + 1) + " minutes.";
 
-                        listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 0, user));
+                        listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 2, user));
                     }
                 }
 
@@ -1044,14 +994,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                  */
 
                 // If it's weekend
-                if (weekend && (entry.getKey().getLastStationName().equals(closestStationName)
-                        || entry.getKey().getFirstStationName().equals(closestStationName)
-                        || entry.getKey().getStationsFromFirstStation().contains(closestStationName)
-                        || entry.getKey().getStationsFromLastStation().contains(closestStationName)
-                        || entry.getKey().getLastStationName().equals(closestStationName2)
-                        || entry.getKey().getFirstStationName().equals(closestStationName2)
-                        || entry.getKey().getStationsFromFirstStation().contains(closestStationName2)
-                        || entry.getKey().getStationsFromLastStation().contains(closestStationName2))) {
+                if (weekend) {
 
                     String[] splitTime;
 
@@ -1119,14 +1062,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                 }
                 // If it's weekday
-                else if (!weekend && (entry.getKey().getLastStationName().equals(closestStationName)
-                        || entry.getKey().getFirstStationName().equals(closestStationName)
-                        || entry.getKey().getStationsFromFirstStation().contains(closestStationName)
-                        || entry.getKey().getStationsFromLastStation().contains(closestStationName)
-                        || entry.getKey().getLastStationName().equals(closestStationName2)
-                        || entry.getKey().getFirstStationName().equals(closestStationName2)
-                        || entry.getKey().getStationsFromFirstStation().contains(closestStationName2)
-                        || entry.getKey().getStationsFromLastStation().contains(closestStationName2))) {
+                else {
 
                     String[] splitTime;
 
@@ -1210,8 +1146,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         bundle.putSerializable("listedBusAdapter", listedBusAdapter.getItem(position));
                         bundle.putString("latitude", latitude);
                         bundle.putString("longitude", longitude);
-                        bundle.putString("closestStationName", closestStationName);
-                        bundle.putString("closestStationName2", closestStationName2);
                         bundle.putString("selectedStation", selectedStation);
                         bundle.putSerializable("stations", (Serializable) stations);
                         listedBusDetailsFragment.setArguments(bundle);
@@ -1304,7 +1238,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     private void readSettings() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-
         if (sharedPreferences.getBoolean(DARK_MAP_THEME, true)) {
             mapboxMap.setStyle(Style.DARK);
             for (Marker marker : stationsMarkers) {
@@ -1316,11 +1249,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station_light));
             }
         }
-
         focusOnCurrentLocation = sharedPreferences.getBoolean(CURRENT_LOCATION_FOCUS, true);
-
         UPDATE_INTERVAL = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_FREQUENCY, "5000")));
-
         UPDATE_BATTERY = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_PRIORITY, "1")));
     }
 }

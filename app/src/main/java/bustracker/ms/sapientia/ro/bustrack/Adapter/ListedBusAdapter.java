@@ -46,17 +46,20 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         assert listedBusData != null;
         Calendar calendar = Calendar.getInstance();
 
+        // Draw the bus number with white on weekdays and blue on weekends
         if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
                 calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
             textViewBusNumber.setTextColor(Color.BLUE);
         } else {
             textViewBusNumber.setTextColor(Color.WHITE);
         }
+
         textViewBusNumber.setText(listedBusData.getBus().getNumber());
 
         if (listedBusData.isRealTime()) {
             textViewRealTimeBusData.setTextColor(Color.GREEN);
             textViewRealTimeBusData.setText(getContext().getString(R.string.real_time_bus_found));
+            textViewBusComesIn.setVisibility(View.GONE);
         } else {
             textViewRealTimeBusData.setTextColor(Color.WHITE);
             textViewRealTimeBusData.setText(getContext().getString(R.string.no_real_time_bus_found));
@@ -85,8 +88,6 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
                 }
             }
         }
-
-        // Return the completed view to render on screen
         return convertView;
     }
 }

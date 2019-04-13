@@ -63,7 +63,7 @@
     <string name="or_select_your_station_from_this_list">or select your station from this list</string>
     <string name="info_for_bus">Info for bus:</string>
     <string name="arrives_in">Arrives in</string>
-    <string name="get_to_this_station">Get to this station:</string>
+    <string name="closest_station_to_you">Closest station to you:</string>
     <string name="real_time_bus_found">Real-time bus found!</string>
     <string name="no_real_time_bus_found">No real-time bus found!</string>
     <string-array name="update_frequency_options">

@@ -13,50 +13,49 @@
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <ImageView
+        android:id="@+id/status_nav_image"
         android:layout_width="52dp"
         android:layout_height="52dp"
         android:contentDescription="@string/nav_header_desc"
         android:paddingTop="@dimen/nav_header_vertical_spacing"
-        app:srcCompat="@drawable/ic_bus" />
+        app:srcCompat="@drawable/ic_waiting_for_bus" />
 
     <TextView
         android:id="@+id/status_nav_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/modernsans"
         android:paddingTop="@dimen/nav_header_vertical_spacing"
         android:text="@string/current_status"
         android:textColor="@color/white"
-        android:textSize="16sp"
-        android:fontFamily="@font/modernsans"
-        />
+        android:textSize="16sp" />
 
     <TextView
         android:id="@+id/closest_station_nav_header"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/modernsans"
         android:text="@string/closest_station"
         android:textColor="@color/white"
-        android:textSize="12sp"
-        android:fontFamily="@font/modernsans"
-        android:layout_marginTop="8dp"
-        />
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/user_id_nav_header"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
-        android:textSize="12sp"
         android:fontFamily="@font/modernsans"
-        android:text="@string/user_id"/>
+        android:text="@string/user_id"
+        android:textColor="@color/white"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/user_speed_nav_header"
-        android:textSize="12sp"
-        android:textColor="@color/white"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fontFamily="@font/modernsans"
-        android:text="@string/current_speed"/>
+        android:text="@string/current_speed"
+        android:textColor="@color/white"
+        android:textSize="12sp" />
 
 </LinearLayout>

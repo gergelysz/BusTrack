@@ -29,7 +29,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".Fragments$ListedBusDetailsFragment" />
-    </application>
+        <activity android:name=".Fragments.ListedBusDetailsFragment"
+            tools:ignore="InnerclassSeparator" />
 
+        <service
+            android:name=".Services.OnAppExitedHelperService"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="false"
+            tools:ignore="InnerclassSeparator" />
+    </application>
 </manifest>
