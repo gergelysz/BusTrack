@@ -12,7 +12,7 @@ public class OnAppExitedHelperService extends Service {
 
     private static final String TAG = "OAEHService";
 
-    MainActivity mainActivity = new MainActivity();
+    private final MainActivity mainActivity = new MainActivity();
 
     @Override
     public IBinder onBind(Intent intent) {

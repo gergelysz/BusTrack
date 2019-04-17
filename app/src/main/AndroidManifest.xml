@@ -25,11 +25,11 @@
             tools:ignore="InnerclassSeparator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".Fragments.ListedBusDetailsFragment"
+        <activity
+            android:name=".Fragments.ListedBusDetailsFragment"
             tools:ignore="InnerclassSeparator" />
 
         <service

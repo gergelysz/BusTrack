@@ -242,7 +242,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             return true;
@@ -252,7 +251,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @SuppressLint("LogNotTimber")
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
 
@@ -557,24 +555,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint("LogNotTimber")
     private void setStations() {
-
-        Log.d(TAG, "setStations function called");
-
         firestoreDb.collection("stations").get().addOnSuccessListener(queryDocumentSnapshots -> {
-
             LatLng coordinates;
-            String latitude;
-            String longitude;
-
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-
-                latitude = documentSnapshot.getString("latitude");
-                longitude = documentSnapshot.getString("longitude");
-
-                assert latitude != null;
-                assert longitude != null;
-                coordinates = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
+                coordinates = new LatLng(Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
+                        Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
 
                 stationsMarkers.add(mapboxMap.addMarker(new MarkerOptions()
                         .position(coordinates)
@@ -594,11 +580,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
-
         currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
-
         userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
-
         firestoreDb.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
             Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
             currentUserId = documentReference.getId();
@@ -610,7 +593,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * and drawing user on map with marker
      * if he/she is on bus.
      */
-
     @SuppressLint("LogNotTimber")
     private void getUsersData() {
 
@@ -797,7 +779,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * Function to read data about all of the buses
      * from the 'busesData' collection.
      */
-    @SuppressLint("LogNotTimber")
     private void getBusesDataFromDatabase() {
         firestoreDb.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
             assert queryDocumentSnapshots != null;
@@ -809,18 +790,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    // TODO
-    @SuppressLint("ApplySharedPref")
     private void saveStationsOffline() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor collection = sharedPreferences.edit();
         Gson gson = new Gson();
-        String hashmapStations = gson.toJson(stations);
-        collection.putString("stationsListOffline", hashmapStations);
-        collection.commit();
+        String hashMapStations = gson.toJson(stations);
+        collection.putString("stationsListOffline", hashMapStations);
+        collection.apply();
     }
 
-    @SuppressLint("LogNotTimber")
     private HashMap<String, LatLng> loadStationsOffline() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         Gson gson = new Gson();
@@ -843,8 +821,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Current hour (in 24 hour format) and minute
         int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         int currentMin = Calendar.getInstance().get(Calendar.MINUTE);
-
-        Log.d(TAG, "Current hour and minute: " + currentHour + ":" + currentMin);
 
         ArrayList<Integer> closestHours = new ArrayList<>();
         ArrayList<Integer> closestMinutes = new ArrayList<>();
@@ -982,7 +958,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         Log.d(TAG, "realtimeshit: " + selectedStationLocation.distanceTo(busLocation) + " meters, speed: " + speedIsXMetersPerMinute);
                         Log.d(TAG, "realtimeshit: " + selectedStationLocation.getLatitude() + ", " + selectedStationLocation.getLongitude() + "  -  " + busLocation.getLatitude() + ", " + busLocation.getLongitude());
-                        comesIn = "Arrives in approximately " + String.valueOf(Math.round(comesInCalc) + 1) + " minutes.";
+                        comesIn = "Arrives in approximately " + (Math.round(comesInCalc) + 1) + " minutes.";
 
                         listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 2, user));
                     }
@@ -1228,7 +1204,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             dialog.cancel();
         });
-
         dialog.show();
     }
 

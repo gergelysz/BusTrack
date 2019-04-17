@@ -89,6 +89,4 @@ public class Bus {
     public void setStationsFromLastStation(List<String> stationsFromLastStation) {
         this.stationsFromLastStation = stationsFromLastStation;
     }
-
-
 }
