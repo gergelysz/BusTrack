@@ -128,7 +128,6 @@ public class User {
     }
 
     public String getDirection() {
-
         return direction;
     }
 

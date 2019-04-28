@@ -101,13 +101,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final String TAG = "MainActivity";
 
     private User currentUser = null;
-
     private boolean firstLocationData = true;
 
     private final Map<String, Bus> buses = new HashMap<>();
-
     private final Map<String, Marker> usersMarkers = new HashMap<>();
-
     private final List<Marker> stationsMarkers = new ArrayList<>();
 
     private final List<User> users = new ArrayList<>();
@@ -414,33 +411,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     activity.setCameraPosition(location);
                 }
 
-                if (activity.firstLocationData) {
-                    activity.uploadCurrentUserData();
-                    activity.firstLocationData = false;
-                }
-
-                if (activity.currentUserId != null) {
-
-                    activity.currentUser.setBus(activity.currentBus);
-                    activity.currentUser.setStatus(activity.currentStatus);
-                    activity.currentUser.setLatitude(activity.latitude);
-                    activity.currentUser.setLongitude(activity.longitude);
-                    activity.currentUser.setTimestamp(Timestamp.now());
-                    activity.currentUser.setId(activity.currentUserId);
-                    activity.currentUser.setDirection(activity.currentDirection);
-                    activity.currentUser.setSpeed(activity.currentSpeed);
-
-                    Log.d(TAG, "Current user updated data: " + activity.currentUser.getId() + " " + activity.currentUser.getBus() + " " + activity.currentUser.getStatus() + " " + activity.currentUser.getLatitude() + " " + activity.currentUser.getLongitude() + " " + activity.currentUser.getDirection());
-
-                    activity.firestoreDb.collection("users")
-                            .document(activity.currentUser.getId())
-                            .set(activity.currentUser)
-                            .addOnSuccessListener(aVoid ->
-                                    Log.d(TAG, "Current user's (" + activity.currentUser.getId() + ") location data updated")
-                            );
-
-                    activity.userIdTextView.setText(activity.getResources().getString(R.string.user_id) + " " + activity.currentUserId);
-                }
+                activity.uploadCurrentUserData();
 
                 /*
                         Get all bus data and calculate
@@ -468,7 +439,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (activity.mapboxMap != null && result.getLastLocation() != null) {
                 activity.mapboxMap.getLocationComponent().forceLocationUpdate(result.getLastLocation());
             }
-
         }
 
 
@@ -487,7 +457,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Toast.LENGTH_SHORT).show();
             }
         }
-
     }
 
     @Override
@@ -504,7 +473,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             readSettings();
         }
         skipReadSettings = false;
-
     }
 
     @Override
@@ -533,13 +501,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
         }
-
         if (currentUserId != null) firestoreDb.collection("users").document(currentUserId).delete();
-
         mapView.onDestroy();
     }
 
@@ -575,17 +540,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     /**
-     * Function to create a new user and upload his/her
-     * data to the Firestore database.
+     * Function to create a new user and upload
+     * and then update his/her
+     * data in the Firestore database.
      */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
-        currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
-        userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
-        firestoreDb.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
-            Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
-            currentUserId = documentReference.getId();
-        }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
+        if (currentUserId == null) {
+            currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
+            userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
+            firestoreDb.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
+                Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
+                currentUserId = documentReference.getId();
+            }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
+        } else {
+            currentUser.setBus(currentBus);
+            currentUser.setStatus(currentStatus);
+            currentUser.setLatitude(latitude);
+            currentUser.setLongitude(longitude);
+            currentUser.setTimestamp(Timestamp.now());
+            currentUser.setId(currentUserId);
+            currentUser.setDirection(currentDirection);
+            currentUser.setSpeed(currentSpeed);
+
+            firestoreDb.collection("users")
+                    .document(currentUser.getId())
+                    .set(currentUser)
+                    .addOnSuccessListener(aVoid ->
+                            Log.d(TAG, "Current user's (" + currentUser.getId() + ") location data updated")
+                    );
+
+            userIdTextView.setText(getResources().getString(R.string.user_id) + " " + currentUserId);
+        }
     }
 
     /**
@@ -603,7 +589,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
                 userIds.add(documentSnapshot.getId());
-                Log.d(TAG, "userIds size: " + userIds.size());
                 // if user isn't yet in the local users list
                 if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
                     User newUser = new User(
@@ -790,6 +775,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    /**
+     * Function to save stations data to
+     * sharedPreferences so the app
+     * won't need to reload data from the
+     * database.
+     */
     private void saveStationsOffline() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor collection = sharedPreferences.edit();
@@ -799,6 +790,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         collection.apply();
     }
 
+    /**
+     * Function to load the saved staions data
+     * from the sharedPreferences.
+     *
+     * @return - HashMap<String, LatLng> stations
+     */
     private HashMap<String, LatLng> loadStationsOffline() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         Gson gson = new Gson();
@@ -817,7 +814,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
-
         // Current hour (in 24 hour format) and minute
         int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         int currentMin = Calendar.getInstance().get(Calendar.MINUTE);
@@ -890,36 +886,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             String busClosestStationName = null;
             int speedIsXMetersPerMinute = 500; //  666 - 40 km/h    500 - 30 km/h
 
-            // Check if it's weekend or not
-            Calendar calendar = Calendar.getInstance();
-            boolean weekend = false;
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
-                    calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                weekend = true;
-            }
-
             if (!selectedStation.isEmpty()) {
                 for (Bus bus : buses.values()) {
                     if (bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation)) {
                         resultBuses.put(bus, 0);
                         currentDirection = "0";
-
                     } else if (bus.getStationsFromLastStation().contains(selectedStation) || bus.getFirstStationName().equals(selectedStation)) {
                         resultBuses.put(bus, 1);
                         currentDirection = "1";
-
                     }
                 }
-                Log.d(TAG, "number of resultBuses: " + resultBuses.size() + " " + resultBuses.values());
             }
 
             dialog.setContentView(R.layout.result_buses);
             dialog.setCancelable(true);
 
-
             TextView textViewHeadingTo = dialog.findViewById(R.id.editText_result_title);
             textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to) + " " + selectedStation);
-
 
             Location selectedStationLocation = new Location("");
             for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
@@ -933,7 +916,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             for (Map.Entry<Bus, Integer> entry : resultBuses.entrySet()) {
-
                 /*
                     Searches for real-time bus
                     in the list of users.
@@ -946,7 +928,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             && user.getStatus().equals("on bus")
                             && user.getDirection().equals(currentDirection)
                     ) {
-
                         busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
                         busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
                         Log.d(TAG, "User found for bus: " + user.getId() + " " + user.getStatus());
@@ -966,14 +947,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 /*
                     Approximately which bus should
-                    come based on the program
+                    come based on the program and check if
+                    it's weekend or not
                  */
 
+                Calendar calendar = Calendar.getInstance();
                 // If it's weekend
-                if (weekend) {
-
+                if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                        calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                     String[] splitTime;
-
                     // From last station to first
                     if (entry.getValue().equals(1)) {
                         for (String time : entry.getKey().getLastStationLeavingTimeWeekend()) {
@@ -999,7 +981,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     }
                                 }
                                 Log.d(TAG, "listing: now(" + currentHour + ":" + currentMin + ") bus time(" + splitTime[0] + ":" + splitTime[1] + "comesInData:(" + comesIn + ")" + entry.getKey().getNumber() + " minutediff: " + minuteDifference);
-
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
                                 Log.d(TAG, "listedBusData added: " + entry.getKey().getNumber() + " " + splitTime[0] + ":" + splitTime[1]);
                             }
@@ -1030,7 +1011,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     }
                                 }
                                 Log.d(TAG, "listing: now(" + currentHour + ":" + currentMin + ") bus time(" + splitTime[0] + ":" + splitTime[1] + "comesInData:(" + comesIn + ")" + entry.getKey().getNumber() + " minutediff: " + minuteDifference);
-
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 0, comesInMin));
                                 Log.d(TAG, "listedBusData added: " + entry.getKey().getNumber());
                             }
@@ -1039,9 +1019,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
                 // If it's weekday
                 else {
-
                     String[] splitTime;
-
                     // From last station to first
                     if (entry.getValue().equals(1)) {
                         for (String time : entry.getKey().getLastStationLeavingTime()) {
@@ -1092,9 +1070,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             dialog.getWindow().setLayout(Toolbar.LayoutParams.MATCH_PARENT, Toolbar.LayoutParams.MATCH_PARENT);
-
             ListView listView;
-
             listView = dialog.findViewById(R.id.listView_result_buses);
 
             if (listedBusData.isEmpty()) {
@@ -1105,9 +1081,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 listView.setAdapter(listedBusAdapter);
 
                 listView.setOnItemClickListener((parent, view, position, id) -> {
-
                     ListedBusDetailsFragment listedBusDetailsFragment = new ListedBusDetailsFragment();
-
                     // If the user clicked on the real-time bus
                     if (Objects.requireNonNull(listedBusAdapter.getItem(position)).getUser() != null) {
                         Location userLoc = new Location("");
@@ -1125,13 +1099,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         bundle.putString("selectedStation", selectedStation);
                         bundle.putSerializable("stations", (Serializable) stations);
                         listedBusDetailsFragment.setArguments(bundle);
-
                         listedBusDetailsFragment.show(getSupportFragmentManager(), "ListedBusDetailsFragment");
                     }
                 });
             }
         });
-
         dialog.show();
     }
 

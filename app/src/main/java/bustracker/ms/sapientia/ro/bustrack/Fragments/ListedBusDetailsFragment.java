@@ -51,7 +51,6 @@ public class ListedBusDetailsFragment extends DialogFragment {
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
     private MapView mapViewListedRouteForUser;
-    private LatLng destinationPoint = new LatLng();
 
     public ListedBusDetailsFragment() {
         // Required empty public constructor
@@ -94,9 +93,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
         float distance = 20000;
         String closestStationName = "";
 
-
-        // Calculate arrival
-
+        // To calculate arrival
         int startIndex = 0;
         int endIndex = 0;
         int numberOfStationsBetween;
@@ -152,8 +149,6 @@ public class ListedBusDetailsFragment extends DialogFragment {
             else if (listedBusData.getComesInMin() < 0) {
                 textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
             }
-
-
         }
         // From last station to first
         else {
@@ -231,6 +226,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
                             .build()),
                     1000);
 
+            //TODO
             assert Mapbox.getAccessToken() != null;
             NavigationRoute.Builder builder = NavigationRoute.builder(getActivity())
                     .accessToken(Mapbox.getAccessToken())
@@ -272,7 +268,6 @@ public class ListedBusDetailsFragment extends DialogFragment {
                         }
                     });
         });
-
         return view;
     }
 
