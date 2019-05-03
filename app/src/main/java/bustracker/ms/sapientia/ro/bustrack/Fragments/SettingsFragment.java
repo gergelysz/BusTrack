@@ -12,7 +12,6 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String DARK_MAP_THEME = "switch_theme";
     public static final String CURRENT_LOCATION_FOCUS = "switch_current_location";
     public static final String UPDATE_FREQUENCY = "list_update_frequency";
-    public static final String UPDATE_PRIORITY = "list_update_priority";
 
     private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
 
@@ -41,9 +40,6 @@ public class SettingsFragment extends PreferenceFragment {
                     }
                     break;
                 case UPDATE_FREQUENCY:
-                    Toast.makeText(getActivity(), "You'll need to restart the app for the changes to work.", Toast.LENGTH_SHORT).show();
-                    break;
-                case UPDATE_PRIORITY:
                     Toast.makeText(getActivity(), "You'll need to restart the app for the changes to work.", Toast.LENGTH_SHORT).show();
                     break;
             }

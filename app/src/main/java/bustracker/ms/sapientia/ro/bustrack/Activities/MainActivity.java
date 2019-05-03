@@ -2,7 +2,10 @@ package bustracker.ms.sapientia.ro.bustrack.Activities;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -40,11 +43,6 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.mapbox.android.core.location.LocationEngine;
-import com.mapbox.android.core.location.LocationEngineCallback;
-import com.mapbox.android.core.location.LocationEngineProvider;
-import com.mapbox.android.core.location.LocationEngineRequest;
-import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.api.directions.v5.DirectionsCriteria;
@@ -57,9 +55,6 @@ import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.location.LocationComponent;
-import com.mapbox.mapboxsdk.location.modes.CameraMode;
-import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -69,7 +64,6 @@ import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -85,7 +79,7 @@ import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
 import bustracker.ms.sapientia.ro.bustrack.Fragments.ListedBusDetailsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
-import bustracker.ms.sapientia.ro.bustrack.Services.OnAppExitedHelperService;
+import bustracker.ms.sapientia.ro.bustrack.Services.LocationUpdatesService;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -93,15 +87,24 @@ import retrofit2.Response;
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.CURRENT_LOCATION_FOCUS;
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_FREQUENCY;
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_PRIORITY;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
-        PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
 
+    private static MainActivity instance;
+
+    public static MainActivity getInstance() {
+        return instance;
+    }
+
+    public static final String CHANNEL_ID = "BusTrackServiceChannel";
+
+    private Marker currentUserMarker;
+    private Location currentLocation;
+
+    private boolean loaded = false;
     private static final String TAG = "MainActivity";
 
     private User currentUser = null;
-    private boolean firstLocationData = true;
 
     private final Map<String, Bus> buses = new HashMap<>();
     private final Map<String, Marker> usersMarkers = new HashMap<>();
@@ -112,8 +115,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private final List<String> userIds = new ArrayList<>();
     private Map<String, LatLng> stations = new HashMap<>();
 
-    private int UPDATE_INTERVAL;
-    private int UPDATE_BATTERY;
+    public static int UPDATE_INTERVAL;
+    public static int UPDATE_BATTERY;
 
     private boolean skipReadSettings = true;
 
@@ -121,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String longitude;
     private String currentBus = "0";
     private String currentStatus = "waiting for bus";
-    public String currentUserId = null;
+    public static String currentUserId = null;
     private String currentDirection = "0";
     private String currentSpeed = "0";
     private String selectedStation = "";
@@ -150,11 +153,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private MapboxMap mapboxMap;
     private MapView mapView;
 
+    public static FirebaseFirestore firestoreDb;
     private PermissionsManager permissionsManager;
-    private LocationEngine locationEngine;
-    private final MainActivityLocationCallback callback = new MainActivityLocationCallback(this);
-
-    public FirebaseFirestore firestoreDb;
 
     public MainActivity() {
     }
@@ -173,12 +173,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         firestoreDb = FirebaseFirestore.getInstance();
 
-        //---------------------------------------------
-        Intent intent = new Intent(MainActivity.this, OnAppExitedHelperService.class);
-        startService(intent);
-        //---------------------------------------------
-
         mapView.getMapAsync(this);
+
 
         TelemetryDefinition telemetry = Mapbox.getTelemetry();
         assert telemetry != null;
@@ -256,6 +252,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 selectedStationRouting();
                 break;
             case R.id.nav_offline_bus_data:
+                getUsersData();
                 break;
             case R.id.nav_change_statusAndBus:
                 statusAndBusSelectorLoader();
@@ -276,14 +273,81 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
+    @Override
+    public void onExplanationNeeded(List<String> permissionsToExplain) {
+        Toast.makeText(this, "No location permission", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onPermissionResult(boolean granted) {
+        if (granted) {
+            startService(new Intent(MainActivity.this, LocationUpdatesService.class));
+        } else {
+            Toast.makeText(this, "Location permission not granted!", Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
     @SuppressLint("LogNotTimber")
     @Override
     public void onMapReady(@NonNull final MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
-        mapboxMap.setStyle(Style.DARK, this::enableLocationComponent);
-
         readSettings();
+
+        if (PermissionsManager.areLocationPermissionsGranted(this)) {
+            startService(new Intent(MainActivity.this, LocationUpdatesService.class));
+        } else {
+            permissionsManager = new PermissionsManager(this);
+            permissionsManager.requestLocationPermissions(this);
+        }
+
+        currentLocation = new Location("");
+        BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent != null) {
+                    latitude = intent.getStringExtra("latitude");
+                    longitude = intent.getStringExtra("longitude");
+                    currentSpeed = intent.getStringExtra("speed");
+                    uploadCurrentUserData();
+                    currentLocation.setLatitude(Float.valueOf(latitude));
+                    currentLocation.setLongitude(Float.valueOf(longitude));
+                    Log.d(TAG, "New location data from service: " + latitude + " " + longitude);
+
+                    if (focusOnCurrentLocation) {
+                        setCameraPosition(currentLocation);
+                    }
+
+                    /*
+                            Get all bus data and calculate
+                            the closest distance to current location.
+                     */
+
+                    for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                        Location locationStation = new Location("calcClosest");
+
+                        locationStation.setLatitude(entry.getValue().getLatitude());
+                        locationStation.setLongitude(entry.getValue().getLongitude());
+
+                        if (distanceToClosestStation > currentLocation.distanceTo(locationStation)) {
+                            distanceToClosestStation = currentLocation.distanceTo(locationStation);
+                            closestStationName = entry.getKey();
+                        }
+                    }
+                    closestStationTextView.setText(getResources().getString(R.string.closest_station) + " " + closestStationName);
+                    speedTextView.setText(getResources().getString(R.string.current_speed) + " " + currentLocation.getSpeed());
+                    currentSpeed = String.valueOf(currentLocation.getSpeed());
+                }
+            }
+        };
+        registerReceiver(broadcastReceiver, new IntentFilter("service.to.activity.send.data"));
 
         /*
                     Get stations from database
@@ -308,64 +372,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         getUsersData();
         // Get the buses data from database
         getBusesDataFromDatabase();
-    }
 
-    /**
-     * Initialize the Maps SDK's LocationComponent
-     */
-    @SuppressWarnings({"MissingPermission"})
-    private void enableLocationComponent(@NonNull Style loadedMapStyle) {
-        if (PermissionsManager.areLocationPermissionsGranted(this)) {
-            initLocationEngine();
-            LocationComponent locationComponent = mapboxMap.getLocationComponent();
-            locationComponent.activateLocationComponent(this, loadedMapStyle, false);
-            locationComponent.setLocationComponentEnabled(true);
-            locationComponent.setCameraMode(CameraMode.TRACKING);
-            locationComponent.setRenderMode(RenderMode.NORMAL);
-        } else {
-            permissionsManager = new PermissionsManager(this);
-            permissionsManager.requestLocationPermissions(this);
-        }
-    }
-
-    /**
-     * Set up the LocationEngine and the parameters for querying the device's location
-     */
-    @SuppressLint("MissingPermission")
-    private void initLocationEngine() {
-        locationEngine = LocationEngineProvider.getBestLocationEngine(this);
-
-        LocationEngineRequest request = new LocationEngineRequest.Builder(1000)
-                .setFastestInterval(UPDATE_INTERVAL)
-                .setPriority(UPDATE_BATTERY)
-                .setDisplacement(0)
-                .setMaxWaitTime(UPDATE_INTERVAL)
-                .build();
-
-        locationEngine.requestLocationUpdates(request, callback, getMainLooper());
-        locationEngine.getLastLocation(callback);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    @Override
-    public void onExplanationNeeded(List<String> permissionsToExplain) {
-        Toast.makeText(this, "No location permission", Toast.LENGTH_LONG).show();
-    }
-
-    @Override
-    public void onPermissionResult(boolean granted) {
-        if (granted) {
-            if (mapboxMap.getStyle() != null) {
-                enableLocationComponent(mapboxMap.getStyle());
-            }
-        } else {
-            Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show();
-            finish();
-        }
     }
 
     /**
@@ -376,87 +383,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     private void setCameraPosition(Location location) {
         mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 15));
-    }
-
-    private static class MainActivityLocationCallback
-            implements LocationEngineCallback<LocationEngineResult> {
-
-        private final WeakReference<MainActivity> activityWeakReference;
-
-        MainActivityLocationCallback(MainActivity activity) {
-            this.activityWeakReference = new WeakReference<>(activity);
-        }
-
-        /**
-         * The LocationEngineCallback interface's method which fires when the device's location has changed.
-         *
-         * @param result the LocationEngineResult object which has the last known location within it.
-         */
-        @SuppressLint({"LogNotTimber", "SetTextI18n"})
-        @Override
-        public void onSuccess(LocationEngineResult result) {
-            MainActivity activity = activityWeakReference.get();
-
-            if (activity != null) {
-
-                Location location = result.getLastLocation();
-                assert location != null;
-
-                Log.d(TAG, "getLastLocation: " + location.getLatitude() + " " + location.getLongitude());
-
-                activity.latitude = String.valueOf(location.getLatitude());
-                activity.longitude = String.valueOf(location.getLongitude());
-
-                if (activity.focusOnCurrentLocation) {
-                    activity.setCameraPosition(location);
-                }
-
-                activity.uploadCurrentUserData();
-
-                /*
-                        Get all bus data and calculate
-                        the closest distance to current location.
-                 */
-
-                for (Map.Entry<String, LatLng> entry : activity.stations.entrySet()) {
-                    Location locationStation = new Location("calcClosest");
-
-                    locationStation.setLatitude(entry.getValue().getLatitude());
-                    locationStation.setLongitude(entry.getValue().getLongitude());
-
-                    if (activity.distanceToClosestStation > location.distanceTo(locationStation)) {
-                        activity.distanceToClosestStation = location.distanceTo(locationStation);
-                        activity.closestStationName = entry.getKey();
-                    }
-                }
-                activity.closestStationTextView.setText(activity.getResources().getString(R.string.closest_station) + " " + activity.closestStationName);
-                activity.speedTextView.setText(activity.getResources().getString(R.string.current_speed) + " " + location.getSpeed());
-                activity.currentSpeed = String.valueOf(location.getSpeed());
-            }
-
-            // Pass the new location to the Maps SDK's LocationComponent
-            assert activity != null;
-            if (activity.mapboxMap != null && result.getLastLocation() != null) {
-                activity.mapboxMap.getLocationComponent().forceLocationUpdate(result.getLastLocation());
-            }
-        }
-
-
-        /**
-         * The LocationEngineCallback interface's method which fires when the device's location can not be captured
-         *
-         * @param exception the exception message
-         */
-        @SuppressLint("LogNotTimber")
-        @Override
-        public void onFailure(@NonNull Exception exception) {
-            Log.d("LocationChangeActivity", exception.getLocalizedMessage());
-            MainActivity activity = activityWeakReference.get();
-            if (activity != null) {
-                Toast.makeText(activity, exception.getLocalizedMessage(),
-                        Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 
     @Override
@@ -501,9 +427,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (locationEngine != null) {
-            locationEngine.removeLocationUpdates(callback);
-        }
         if (currentUserId != null) firestoreDb.collection("users").document(currentUserId).delete();
         mapView.onDestroy();
     }
@@ -546,14 +469,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void uploadCurrentUserData() {
-        if (currentUserId == null) {
+        if (currentUserId == null && !loaded) {
+            loaded = true;
             currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
             userStatusTextView.setText(getString(R.string.current_status) + " " + currentStatus);
             firestoreDb.collection("users").add(currentUser).addOnSuccessListener(documentReference -> {
                 Log.d(TAG, getString(R.string.user_data_upload_success) + documentReference.getId());
                 currentUserId = documentReference.getId();
             }).addOnFailureListener(e -> Log.d(TAG, getString(R.string.user_data_upload_fail_details) + e.getMessage()));
-        } else {
+            currentUserMarker = mapboxMap.addMarker(new MarkerOptions()
+                    .position(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)))
+                    .title("You")
+                    .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user))
+            );
+        } else if (currentUserId != null && loaded) {
             currentUser.setBus(currentBus);
             currentUser.setStatus(currentStatus);
             currentUser.setLatitude(latitude);
@@ -562,6 +491,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             currentUser.setId(currentUserId);
             currentUser.setDirection(currentDirection);
             currentUser.setSpeed(currentSpeed);
+
+            currentUserMarker.setPosition(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)));
 
             firestoreDb.collection("users")
                     .document(currentUser.getId())
@@ -581,9 +512,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint("LogNotTimber")
     private void getUsersData() {
-
-        Log.d(TAG, "Getting users...");
-
         firestoreDb.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
             userIds.clear();
             assert queryDocumentSnapshots != null;
@@ -610,7 +538,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus))
                         ));
                     }
-
                 }
                 // user is already in the local users list
                 else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
@@ -930,17 +857,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     ) {
                         busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
                         busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
-                        Log.d(TAG, "User found for bus: " + user.getId() + " " + user.getStatus());
-
-                        Location currentLocation = new Location("");
-                        currentLocation.setLatitude(Double.parseDouble(latitude));
-                        currentLocation.setLongitude(Double.parseDouble(longitude));
                         comesInCalc = currentLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
-
-                        Log.d(TAG, "realtimeshit: " + selectedStationLocation.distanceTo(busLocation) + " meters, speed: " + speedIsXMetersPerMinute);
-                        Log.d(TAG, "realtimeshit: " + selectedStationLocation.getLatitude() + ", " + selectedStationLocation.getLongitude() + "  -  " + busLocation.getLatitude() + ", " + busLocation.getLongitude());
                         comesIn = "Arrives in approximately " + (Math.round(comesInCalc) + 1) + " minutes.";
-
                         listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 2, user));
                     }
                 }
@@ -959,13 +877,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // From last station to first
                     if (entry.getValue().equals(1)) {
                         for (String time : entry.getKey().getLastStationLeavingTimeWeekend()) {
-
                             splitTime = time.split(":");
-
                             int comesInMin = (currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1]));
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
-
-                            Log.d(TAG, "ComesInMin: " + comesInMin);
 
                             if (minuteDifference <= 40) {
                                 Log.d(TAG, "minuteDiff: " + minuteDifference);
@@ -989,14 +903,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // From first station to last
                     else if (entry.getValue().equals(0)) {
                         for (String time : entry.getKey().getFirstStationLeavingTimeWeekend()) {
-
                             splitTime = time.split(":");
-
                             int comesInMin = (currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1]));
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
-
-                            Log.d(TAG, "ComesInMin: " + comesInMin);
-
 
                             if (minuteDifference <= 40) {
                                 Log.d(TAG, "minuteDiff: " + minuteDifference);
@@ -1062,7 +971,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         comesIn = "Leaves " + entry.getKey().getFirstStationName() + " in " + minuteDifference + " minutes.";
                                     }
                                 }
-                                listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
+                                listedBusData.add(new ListedBusData(entry.getKey(), false, 0, comesInMin));
                             }
                         }
                     }
@@ -1147,10 +1056,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 for (Map.Entry<String, Bus> bus : buses.entrySet()) {
                     if (selection.equals(bus.getKey())) {
-
                         firstStation.setVisibility(View.VISIBLE);
                         lastStation.setVisibility(View.VISIBLE);
-
                         firstStation.setText(bus.getValue().getFirstStationName() + " -> " + bus.getValue().getLastStationName());
                         lastStation.setText(bus.getValue().getLastStationName() + " -> " + bus.getValue().getFirstStationName());
                     }
@@ -1173,7 +1080,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             } else {
                 getRouteForBus(Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getStationsFromLastStation(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationName(), Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationName());
             }
-
             dialog.cancel();
         });
         dialog.show();
@@ -1198,6 +1104,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         focusOnCurrentLocation = sharedPreferences.getBoolean(CURRENT_LOCATION_FOCUS, true);
         UPDATE_INTERVAL = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_FREQUENCY, "5000")));
-        UPDATE_BATTERY = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_PRIORITY, "1")));
     }
+
+
 }

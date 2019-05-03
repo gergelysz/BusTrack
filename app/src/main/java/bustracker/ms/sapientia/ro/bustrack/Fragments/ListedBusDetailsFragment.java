@@ -226,7 +226,6 @@ public class ListedBusDetailsFragment extends DialogFragment {
                             .build()),
                     1000);
 
-            //TODO
             assert Mapbox.getAccessToken() != null;
             NavigationRoute.Builder builder = NavigationRoute.builder(getActivity())
                     .accessToken(Mapbox.getAccessToken())
@@ -256,10 +255,8 @@ public class ListedBusDetailsFragment extends DialogFragment {
                                 navigationMapRoute.updateRouteVisibilityTo(false);
                             } else {
                                 navigationMapRoute = new NavigationMapRoute(null, mapViewListedRouteForUser, mapboxMap, R.style.NavigationMapRoute);
-                                Log.d(TAG, getString(R.string.route_configured));
                             }
                             navigationMapRoute.addRoute(currentRoute);
-                            Log.d(TAG, getString(R.string.route_added));
                         }
 
                         @Override

@@ -23,11 +23,4 @@
         android:icon="@drawable/ic_cloud"
         android:key="list_update_frequency"
         android:title="Location update frequency" />
-    <ListPreference
-        android:defaultValue="1"
-        android:entries="@array/update_priority_mode"
-        android:entryValues="@array/update_priority_mode_values"
-        android:icon="@drawable/ic_battery"
-        android:key="list_update_priority"
-        android:title="Location update priority" />
 </PreferenceScreen>
