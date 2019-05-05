@@ -65,6 +65,7 @@
     <string name="closest_station_to_you">Closest station to you:</string>
     <string name="real_time_bus_found">Real-time bus found!</string>
     <string name="no_real_time_bus_found">No real-time bus found!</string>
+    <string name="notification_channel_id">bustracker.ms.sapientia.ro</string>
     <string-array name="update_frequency_options">
         <item>Fastest</item>
         <item>5 seconds</item>

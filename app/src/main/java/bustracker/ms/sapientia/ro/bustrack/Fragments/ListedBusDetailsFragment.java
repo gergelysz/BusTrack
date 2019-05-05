@@ -51,6 +51,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
     private MapView mapViewListedRouteForUser;
+    private double distanceToClosestStation = 2000000;
 
     public ListedBusDetailsFragment() {
         // Required empty public constructor
@@ -88,20 +89,18 @@ public class ListedBusDetailsFragment extends DialogFragment {
         LatLng closest = new LatLng();
         Location locationStation = new Location("");
         Location locationHere = new Location("");
+        Location closestStation = new Location("");
         locationHere.setLatitude(Double.parseDouble(latitude));
         locationHere.setLongitude(Double.parseDouble(longitude));
         float distance = 20000;
         String closestStationName = "";
 
         // To calculate arrival
-        int startIndex = 0;
-        int endIndex = 0;
         int numberOfStationsBetween;
         float comesInAround;
 
-        // From first stations to last
+        // From first station to last
         if (listedBusData.getDirection() == 0) {
-
             for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
                 // If bus goes through that station
                 if (listedBusData.getBus().getStationsFromFirstStation().contains(entry.getKey())) {
@@ -116,43 +115,42 @@ public class ListedBusDetailsFragment extends DialogFragment {
                 }
             }
 
-            for (String string : listedBusData.getBus().getStationsFromFirstStation()) {
-                if (string.equals(closestStationName)) {
-                    startIndex = listedBusData.getBus().getStationsFromFirstStation().indexOf(string);
-                }
-                if (string.equals(selectedStation)) {
-                    endIndex = listedBusData.getBus().getStationsFromFirstStation().indexOf(string);
+            int start = 0, end = listedBusData.getBus().getStationsFromFirstStation().size();
+            for (int i = 0; i < listedBusData.getBus().getStationsFromFirstStation().size(); ++i) {
+                if (listedBusData.getBus().getStationsFromFirstStation().get(i).equals(closestStationName)) {
+                    end = i + 1;
+                } else if (listedBusData.getBus().getStationsFromFirstStation().get(i).equals(selectedStation)) {
+                    start = i + 1;
                 }
             }
 
-            if (endIndex == 0) {
-                endIndex = listedBusData.getBus().getStationsFromFirstStation().size() - 1;
-            }
-
-            numberOfStationsBetween = endIndex - startIndex;
+            numberOfStationsBetween = start - end + 2;
 
             Location busLocation = new Location("");
             busLocation.setLatitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getFirstStationName())).getLatitude());
             busLocation.setLongitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getFirstStationName())).getLongitude());
 
-            comesInAround = locationHere.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute
+            closestStation.setLatitude(closest.getLatitude());
+            closestStation.setLongitude(closest.getLongitude());
+
+            comesInAround = closestStation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute  500m/min = 30km/h
+            comesInAround = Math.round(comesInAround);
 
             // Bus already left
             if (listedBusData.getComesInMin() > 0) {
-                if (listedBusData.getComesInMin() - numberOfStationsBetween - Math.round(comesInAround) <= 0) {
-                    textViewArrivesIn.setText("Arrives in " + Math.abs(Math.abs(listedBusData.getComesInMin()) - numberOfStationsBetween - Math.round(comesInAround)) + " minutes.");
+                if (numberOfStationsBetween + comesInAround - listedBusData.getComesInMin() > 0) {
+                    textViewArrivesIn.setText("Arrives in " + Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) + " minutes.");
                 } else {
                     textViewArrivesIn.setText("Probably left.");
                 }
             }
             // Bus will leave sometime
             else if (listedBusData.getComesInMin() < 0) {
-                textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
+                textViewArrivesIn.setText("Arrives in " + Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) + " minutes.");
             }
         }
         // From last station to first
         else {
-
             for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
                 // If bus goes through that station
                 if (listedBusData.getBus().getStationsFromLastStation().contains(entry.getKey())) {
@@ -167,41 +165,38 @@ public class ListedBusDetailsFragment extends DialogFragment {
                 }
             }
 
-            for (String string : listedBusData.getBus().getStationsFromLastStation()) {
-                if (string.equals(closestStationName)) {
-                    startIndex = listedBusData.getBus().getStationsFromLastStation().indexOf(string);
-                }
-                if (string.equals(selectedStation)) {
-                    endIndex = listedBusData.getBus().getStationsFromLastStation().indexOf(string);
+            int start = 0, end = listedBusData.getBus().getStationsFromLastStation().size();
+            for (int i = 0; i < listedBusData.getBus().getStationsFromLastStation().size(); ++i) {
+                if (listedBusData.getBus().getStationsFromLastStation().get(i).equals(closestStationName)) {
+                    end = i + 1;
+                } else if (listedBusData.getBus().getStationsFromLastStation().get(i).equals(selectedStation)) {
+                    start = i + 1;
                 }
             }
 
-            if (endIndex == 0) {
-                endIndex = listedBusData.getBus().getStationsFromLastStation().size() - 1;
-            }
-
-            numberOfStationsBetween = endIndex - startIndex;
+            numberOfStationsBetween = end - start + 2;
 
             Location busLocation = new Location("");
             busLocation.setLatitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getLastStationName())).getLatitude());
             busLocation.setLongitude(Objects.requireNonNull(stations.get(listedBusData.getBus().getLastStationName())).getLongitude());
 
-            Location currentLocation = new Location("");
-            currentLocation.setLatitude(Double.parseDouble(latitude));
-            currentLocation.setLongitude(Double.parseDouble(longitude));
-            comesInAround = currentLocation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute
+            closestStation.setLatitude(closest.getLatitude());
+            closestStation.setLongitude(closest.getLongitude());
+
+            comesInAround = closestStation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute  500m/min = 30km/h
+            comesInAround = Math.round(comesInAround);
 
             // Bus already left
             if (listedBusData.getComesInMin() > 0) {
-                if (listedBusData.getComesInMin() - numberOfStationsBetween - Math.round(comesInAround) <= 0) {
-                    textViewArrivesIn.setText("Arrives in " + Math.abs(Math.abs(listedBusData.getComesInMin()) - numberOfStationsBetween - Math.round(comesInAround)) + " minutes.");
+                if (numberOfStationsBetween + comesInAround - listedBusData.getComesInMin() > 0) {
+                    textViewArrivesIn.setText("Arrives in " + Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) + " minutes.");
                 } else {
                     textViewArrivesIn.setText("Probably left.");
                 }
             }
             // Bus will leave sometime
             else if (listedBusData.getComesInMin() < 0) {
-                textViewArrivesIn.setText("Arrives in " + (Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + Math.round(comesInAround)) + " minutes.");
+                textViewArrivesIn.setText("Arrives in " + Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) + " minutes.");
             }
         }
 

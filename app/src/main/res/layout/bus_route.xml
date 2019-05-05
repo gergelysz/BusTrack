@@ -13,19 +13,20 @@
         tools:ignore="UselessParent">
 
         <TextView
-            android:id="@+id/editText_drawRoute_select_bus"
+            android:id="@+id/textView_drawRoute_select_bus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/select_the_bus_to_show_it_s_route"
             android:textColor="@color/white"
             android:fontFamily="@font/modernsans"
+            android:layout_centerHorizontal="true"
             android:textSize="16sp" />
 
         <Spinner
             android:id="@+id/spinner_drawRoute_selectBus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/editText_drawRoute_select_bus"
+            android:layout_below="@id/textView_drawRoute_select_bus"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
             android:backgroundTint="@color/white"

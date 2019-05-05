@@ -17,23 +17,22 @@ import java.util.TimerTask;
 
 import bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity;
 
-import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.currentUserId;
-import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.firestoreDb;
-
 public class LocationUpdatesService extends Service implements LocationListener {
 
     private LocationManager locationManager;
+    private static final String TAG = "LocationUpdatesService";
     private Location location = null;
     private final Handler mHandler = new Handler();
     private Timer mTimer = null;
     private Intent intentService;
 
+    /**
+     * If the app is closed from 'Recent items'
+     * then stop this service and all of its tasks.
+     */
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         locationManager.removeUpdates(this);
-        if (currentUserId != null) {
-            firestoreDb.collection("users").document(currentUserId).delete();
-        }
         mTimer.cancel();
         stopSelf();
     }
@@ -47,6 +46,8 @@ public class LocationUpdatesService extends Service implements LocationListener 
     @Override
     public void onCreate() {
         super.onCreate();
+
+        /* Create thread to run timer on, with location updates. */
         mTimer = new Timer();
         mTimer.schedule(new TimerTaskToGetLocation(), 0, MainActivity.UPDATE_INTERVAL);
         intentService = new Intent("service.to.activity.send.data");
@@ -68,12 +69,18 @@ public class LocationUpdatesService extends Service implements LocationListener 
     public void onProviderDisabled(String provider) {
     }
 
+    /**
+     * Function to request location updates
+     * firstly based on network connection,
+     * which is more battery friendly but inaccurate,
+     * then based on GPS data, which is heavier on
+     * resources but more accurate.
+     */
     @SuppressLint("MissingPermission")
     private void getLocationUpdates() {
         locationManager = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
         boolean isGPSEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         boolean isNetworkEnable = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
 
         if (!isGPSEnable && !isNetworkEnable) {
             startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
@@ -101,6 +108,10 @@ public class LocationUpdatesService extends Service implements LocationListener 
         }
     }
 
+    /**
+     * Timer task to run getLocationUpdates() in a
+     * fixed interval set by the user in Settings.
+     */
     private class TimerTaskToGetLocation extends TimerTask {
         @Override
         public void run() {

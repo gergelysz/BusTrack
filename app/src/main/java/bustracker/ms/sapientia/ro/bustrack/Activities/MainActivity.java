@@ -1,6 +1,7 @@
 package bustracker.ms.sapientia.ro.bustrack.Activities;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -124,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String longitude;
     private String currentBus = "0";
     private String currentStatus = "waiting for bus";
-    public static String currentUserId = null;
+    private String currentUserId = null;
     private String currentDirection = "0";
     private String currentSpeed = "0";
     private String selectedStation = "";
@@ -153,7 +154,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private MapboxMap mapboxMap;
     private MapView mapView;
 
-    public static FirebaseFirestore firestoreDb;
+    private BroadcastReceiver broadcastReceiver;
+
+    @SuppressLint("StaticFieldLeak")
+    private FirebaseFirestore firestoreDb;
     private PermissionsManager permissionsManager;
 
     public MainActivity() {
@@ -162,7 +166,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressLint("LogNotTimber")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
         Mapbox.getInstance(this, getString(R.string.access_token));
@@ -174,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         firestoreDb = FirebaseFirestore.getInstance();
 
         mapView.getMapAsync(this);
-
 
         TelemetryDefinition telemetry = Mapbox.getTelemetry();
         assert telemetry != null;
@@ -252,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 selectedStationRouting();
                 break;
             case R.id.nav_offline_bus_data:
-                getUsersData();
+                getBusesProgram();
                 break;
             case R.id.nav_change_statusAndBus:
                 statusAndBusSelectorLoader();
@@ -308,42 +310,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         currentLocation = new Location("");
-        BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        broadcastReceiver = new BroadcastReceiver() {
             @SuppressLint("SetTextI18n")
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent != null) {
-                    latitude = intent.getStringExtra("latitude");
-                    longitude = intent.getStringExtra("longitude");
-                    currentSpeed = intent.getStringExtra("speed");
-                    uploadCurrentUserData();
-                    currentLocation.setLatitude(Float.valueOf(latitude));
-                    currentLocation.setLongitude(Float.valueOf(longitude));
-                    Log.d(TAG, "New location data from service: " + latitude + " " + longitude);
+                    if (!mapView.isDestroyed()) {
+                        latitude = intent.getStringExtra("latitude");
+                        longitude = intent.getStringExtra("longitude");
+                        currentSpeed = intent.getStringExtra("speed");
+                        uploadCurrentUserData();
+                        currentLocation.setLatitude(Float.valueOf(latitude));
+                        currentLocation.setLongitude(Float.valueOf(longitude));
+                        Log.d(TAG, "New location data from service: " + latitude + " " + longitude);
 
-                    if (focusOnCurrentLocation) {
-                        setCameraPosition(currentLocation);
-                    }
-
-                    /*
-                            Get all bus data and calculate
-                            the closest distance to current location.
-                     */
-
-                    for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
-                        Location locationStation = new Location("calcClosest");
-
-                        locationStation.setLatitude(entry.getValue().getLatitude());
-                        locationStation.setLongitude(entry.getValue().getLongitude());
-
-                        if (distanceToClosestStation > currentLocation.distanceTo(locationStation)) {
-                            distanceToClosestStation = currentLocation.distanceTo(locationStation);
-                            closestStationName = entry.getKey();
+                        if (focusOnCurrentLocation) {
+                            setCameraPosition(currentLocation);
                         }
+
+                        /*
+                                Get all bus data and calculate
+                                the closest distance to current location.
+                         */
+
+                        for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                            Location locationStation = new Location("calcClosest");
+
+                            locationStation.setLatitude(entry.getValue().getLatitude());
+                            locationStation.setLongitude(entry.getValue().getLongitude());
+
+                            if (distanceToClosestStation > currentLocation.distanceTo(locationStation)) {
+                                distanceToClosestStation = currentLocation.distanceTo(locationStation);
+                                closestStationName = entry.getKey();
+                            }
+                        }
+                        closestStationTextView.setText(getResources().getString(R.string.closest_station) + " " + closestStationName);
+                        speedTextView.setText(getResources().getString(R.string.current_speed) + " " + currentLocation.getSpeed());
+                        currentSpeed = String.valueOf(currentLocation.getSpeed());
                     }
-                    closestStationTextView.setText(getResources().getString(R.string.closest_station) + " " + closestStationName);
-                    speedTextView.setText(getResources().getString(R.string.current_speed) + " " + currentLocation.getSpeed());
-                    currentSpeed = String.valueOf(currentLocation.getSpeed());
                 }
             }
         };
@@ -411,6 +415,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onStop() {
         super.onStop();
         mapView.onStop();
+
     }
 
     @Override
@@ -427,8 +432,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (currentUserId != null) firestoreDb.collection("users").document(currentUserId).delete();
         mapView.onDestroy();
+        unregisterReceiver(broadcastReceiver);
+        if (currentUserId != null) {
+            firestoreDb.collection("users").document(currentUserId).delete();
+            currentUserId = null;
+        }
     }
 
     @Override
@@ -516,54 +525,58 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             userIds.clear();
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-                userIds.add(documentSnapshot.getId());
-                // if user isn't yet in the local users list
-                if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
-                    User newUser = new User(
-                            documentSnapshot.getId(),
-                            documentSnapshot.getString("bus"),
-                            documentSnapshot.getString("status"),
-                            documentSnapshot.getTimestamp("timestamp"),
-                            documentSnapshot.getString("latitude"),
-                            documentSnapshot.getString("longitude"),
-                            documentSnapshot.getString("direction"),
-                            documentSnapshot.getString("speed")
-                    );
-                    users.add(newUser);
-                    Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus() + " " + newUser.getSpeed());
-                    if (newUser.getStatus().equals("on bus")) {
-                        usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
-                                .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))
-                                .title(newUser.getBus())
-                                .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus))
-                        ));
+                if (!mapView.isDestroyed()) {
+                    userIds.add(documentSnapshot.getId());
+                    // if user isn't yet in the local users list
+                    if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
+                        User newUser = new User(
+                                documentSnapshot.getId(),
+                                documentSnapshot.getString("bus"),
+                                documentSnapshot.getString("status"),
+                                documentSnapshot.getTimestamp("timestamp"),
+                                documentSnapshot.getString("latitude"),
+                                documentSnapshot.getString("longitude"),
+                                documentSnapshot.getString("direction"),
+                                documentSnapshot.getString("speed")
+                        );
+                        users.add(newUser);
+                        Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus() + " " + newUser.getSpeed());
+                        if (newUser.getStatus().equals("on bus")) {
+                            usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))
+                                    .title(newUser.getBus())
+                                    .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus))
+                            ));
+                        }
                     }
-                }
-                // user is already in the local users list
-                else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
-                    if (Objects.equals(documentSnapshot.getString("status"), "on bus")) {
-                        LatLng newPosition = new LatLng(
-                                Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
-                                Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
-                        Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
-                        Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus));
-                    } else {
-                        mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())));
-                        usersMarkers.remove(documentSnapshot.getId());
+                    // user is already in the local users list
+                    else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
+                        if (Objects.equals(documentSnapshot.getString("status"), "on bus")) {
+                            LatLng newPosition = new LatLng(
+                                    Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
+                                    Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
+                            Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
+                            Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus));
+                        } else {
+                            mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())));
+                            usersMarkers.remove(documentSnapshot.getId());
+                        }
                     }
                 }
             }
 
             for (Map.Entry<String, Marker> entry : usersMarkers.entrySet()) {
-                if (!userIds.contains(entry.getKey())) {
-                    for (User user : users) {
-                        if (user.getId().equals(entry.getKey())) {
-                            users.remove(user);
-                            break;
+                if (!mapView.isDestroyed()) {
+                    if (!userIds.contains(entry.getKey())) {
+                        for (User user : users) {
+                            if (user.getId().equals(entry.getKey())) {
+                                users.remove(user);
+                                break;
+                            }
                         }
+                        mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
+                        usersMarkers.remove(entry.getKey());
                     }
-                    mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(entry.getKey())));
-                    usersMarkers.remove(entry.getKey());
                 }
             }
         });
@@ -1034,11 +1047,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         firstStation = dialog.findViewById(R.id.radioButtonRouting);
         lastStation = dialog.findViewById(R.id.radioButtonRouting2);
 
-        firstStation.setVisibility(View.INVISIBLE);
-        lastStation.setVisibility(View.INVISIBLE);
+        firstStation.setVisibility(View.GONE);
+        lastStation.setVisibility(View.GONE);
 
         Button buttonSelectedBusRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
-
         buttonSelectedBusRouteApply.setClickable(false);
 
         final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectBus);
@@ -1066,7 +1078,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-
             }
         });
 
@@ -1106,5 +1117,96 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         UPDATE_INTERVAL = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_FREQUENCY, "5000")));
     }
 
+    /**
+     * Function to display departure time
+     * of selected bus, based on if it's
+     * weekend or not.
+     */
+    @SuppressLint("SetTextI18n")
+    private void getBusesProgram() {
+        Dialog dialog = new Dialog(MainActivity.this);
+        Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
+        dialog.setContentView(R.layout.bus_route);
+        dialog.setCancelable(true);
 
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+        TextView text;
+        text = dialog.findViewById(R.id.textView_drawRoute_select_bus);
+        text.setText("Select the bus to show it's program");
+        RadioButton firstStation, lastStation;
+        firstStation = dialog.findViewById(R.id.radioButtonRouting);
+        lastStation = dialog.findViewById(R.id.radioButtonRouting2);
+
+        firstStation.setVisibility(View.GONE);
+        lastStation.setVisibility(View.GONE);
+
+        Button buttonSelectedBusRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
+        buttonSelectedBusRouteApply.setClickable(false);
+
+        final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectBus);
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
+                R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
+        spinner.setAdapter(spinnerAdapter);
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                String selection = spinner.getSelectedItem().toString();
+
+                for (Map.Entry<String, Bus> bus : buses.entrySet()) {
+                    if (selection.equals(bus.getKey())) {
+                        firstStation.setVisibility(View.VISIBLE);
+                        lastStation.setVisibility(View.VISIBLE);
+                        firstStation.setText(bus.getValue().getFirstStationName() + " -> " + bus.getValue().getLastStationName());
+                        lastStation.setText(bus.getValue().getLastStationName() + " -> " + bus.getValue().getFirstStationName());
+                    }
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        firstStation.setOnClickListener(v -> buttonSelectedBusRouteApply.setClickable(true));
+        lastStation.setOnClickListener(v -> buttonSelectedBusRouteApply.setClickable(true));
+
+        buttonSelectedBusRouteApply.setOnClickListener(v -> {
+
+            Dialog dialog2;
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Time of departure");
+
+            ListView modeList = new ListView(this);
+            ArrayAdapter<String> modeAdapter;
+            Calendar calendar = Calendar.getInstance();
+
+            if (firstStation.isSelected()) {
+                if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                        calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                    modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationLeavingTimeWeekend());
+                } else {
+                    modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationLeavingTime());
+                }
+            } else {
+                if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                        calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                    modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationLeavingTimeWeekend());
+                } else {
+                    modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationLeavingTime());
+                }
+            }
+
+            modeList.setAdapter(modeAdapter);
+
+            builder.setView(modeList);
+            dialog2 = builder.create();
+            dialog2.show();
+        });
+        dialog.show();
+    }
 }
