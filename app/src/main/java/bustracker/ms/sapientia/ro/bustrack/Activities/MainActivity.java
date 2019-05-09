@@ -79,6 +79,7 @@ import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
 import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.Data.User;
 import bustracker.ms.sapientia.ro.bustrack.Fragments.ListedBusDetailsFragment;
+import bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
 import bustracker.ms.sapientia.ro.bustrack.Services.LocationUpdatesService;
 import retrofit2.Call;
@@ -87,6 +88,7 @@ import retrofit2.Response;
 
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.CURRENT_LOCATION_FOCUS;
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
+import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.THEME_ACCOMMODATION;
 import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_FREQUENCY;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
@@ -117,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Map<String, LatLng> stations = new HashMap<>();
 
     public static int UPDATE_INTERVAL;
-    public static int UPDATE_BATTERY;
+    public static int UPDATE_PRIORITY;
 
     private boolean skipReadSettings = true;
 
@@ -125,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String longitude;
     private String currentBus = "0";
     private String currentStatus = "waiting for bus";
-    private String currentUserId = null;
+    public static String currentUserId = null;
     private String currentDirection = "0";
     private String currentSpeed = "0";
     private String selectedStation = "";
@@ -154,10 +156,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private MapboxMap mapboxMap;
     private MapView mapView;
 
+    private Dialog dialog;
+
     private BroadcastReceiver broadcastReceiver;
 
     @SuppressLint("StaticFieldLeak")
-    private FirebaseFirestore firestoreDb;
+    public static FirebaseFirestore firestoreDb;
     private PermissionsManager permissionsManager;
 
     public MainActivity() {
@@ -311,7 +315,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         currentLocation = new Location("");
         broadcastReceiver = new BroadcastReceiver() {
-            @SuppressLint("SetTextI18n")
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent != null) {
@@ -322,7 +325,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         uploadCurrentUserData();
                         currentLocation.setLatitude(Float.valueOf(latitude));
                         currentLocation.setLongitude(Float.valueOf(longitude));
-                        Log.d(TAG, "New location data from service: " + latitude + " " + longitude);
 
                         if (focusOnCurrentLocation) {
                             setCameraPosition(currentLocation);
@@ -344,8 +346,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 closestStationName = entry.getKey();
                             }
                         }
-                        closestStationTextView.setText(getResources().getString(R.string.closest_station) + " " + closestStationName);
-                        speedTextView.setText(getResources().getString(R.string.current_speed) + " " + currentLocation.getSpeed());
+                        closestStationTextView.setText(getString(R.string.closest_station, closestStationName));
+                        speedTextView.setText(getString(R.string.current_speed, currentSpeed));
                         currentSpeed = String.valueOf(currentLocation.getSpeed());
                     }
                 }
@@ -415,7 +417,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onStop() {
         super.onStop();
         mapView.onStop();
-
     }
 
     @Override
@@ -431,13 +432,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        if(dialog != null) {
+            dialog.dismiss();
+        }
         mapView.onDestroy();
         unregisterReceiver(broadcastReceiver);
         if (currentUserId != null) {
             firestoreDb.collection("users").document(currentUserId).delete();
             currentUserId = null;
         }
+        super.onDestroy();
     }
 
     @Override
@@ -521,7 +525,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @SuppressLint("LogNotTimber")
     private void getUsersData() {
-        firestoreDb.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
+        firestoreDb.collection("users").addSnapshotListener(MainActivity.this, (queryDocumentSnapshots, e) -> {
             userIds.clear();
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
@@ -752,7 +756,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * Function to display available buses
      * for the given station.
      */
-    @SuppressLint({"LogNotTimber", "SetTextI18n"})
     private void selectedStationRouting() {
         // Current hour (in 24 hour format) and minute
         int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
@@ -761,7 +764,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ArrayList<Integer> closestHours = new ArrayList<>();
         ArrayList<Integer> closestMinutes = new ArrayList<>();
 
-        Dialog dialog = new Dialog(MainActivity.this);
+        dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.draw_route_options);
         dialog.setCancelable(true);
@@ -842,7 +845,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             dialog.setCancelable(true);
 
             TextView textViewHeadingTo = dialog.findViewById(R.id.editText_result_title);
-            textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to) + " " + selectedStation);
+            textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to, selectedStation));
 
             Location selectedStationLocation = new Location("");
             for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
@@ -870,8 +873,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     ) {
                         busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
                         busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
-                        comesInCalc = currentLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
-                        comesIn = "Arrives in approximately " + (Math.round(comesInCalc) + 1) + " minutes.";
+//                        comesInCalc = currentLocation.distanceTo(busLocation) / speedIsXMetersPerMinute;
+//                        comesIn = "Arrives in approximately " + (Math.round(comesInCalc) + 1) + " minutes.";
                         listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 2, user));
                     }
                 }
@@ -895,21 +898,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
 
                             if (minuteDifference <= 40) {
-                                Log.d(TAG, "minuteDiff: " + minuteDifference);
-                                if (currentHour * 60 + currentMin > Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])
-                                        && currentHour >= Integer.valueOf(splitTime[0])) {
-                                    comesIn = "Left " + entry.getKey().getLastStationName() + " station " + minuteDifference + " minutes ago.";
-                                } else if (currentHour * 60 + currentMin <= Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])
-                                        && currentHour <= Integer.valueOf(splitTime[0])) {
-                                    if (currentHour * 60 + currentMin == Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                        comesIn = "Leaves " + entry.getKey().getLastStationName() + " station right now.";
-                                    } else {
-                                        comesIn = "Leaves " + entry.getKey().getLastStationName() + " in " + minuteDifference + " minutes.";
-                                    }
-                                }
-                                Log.d(TAG, "listing: now(" + currentHour + ":" + currentMin + ") bus time(" + splitTime[0] + ":" + splitTime[1] + "comesInData:(" + comesIn + ")" + entry.getKey().getNumber() + " minutediff: " + minuteDifference);
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
-                                Log.d(TAG, "listedBusData added: " + entry.getKey().getNumber() + " " + splitTime[0] + ":" + splitTime[1]);
                             }
                         }
                     }
@@ -921,20 +910,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
 
                             if (minuteDifference <= 40) {
-                                Log.d(TAG, "minuteDiff: " + minuteDifference);
-
-                                if (currentHour * 60 + currentMin > Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    comesIn = "Left " + entry.getKey().getFirstStationName() + " station " + minuteDifference + " minutes ago.";
-                                } else if (currentHour * 60 + currentMin <= Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    if (currentHour * 60 + currentMin == Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                        comesIn = "Leaves " + entry.getKey().getFirstStationName() + " station right now.";
-                                    } else {
-                                        comesIn = "Leaves " + entry.getKey().getFirstStationName() + " in " + minuteDifference + " minutes.";
-                                    }
-                                }
-                                Log.d(TAG, "listing: now(" + currentHour + ":" + currentMin + ") bus time(" + splitTime[0] + ":" + splitTime[1] + "comesInData:(" + comesIn + ")" + entry.getKey().getNumber() + " minutediff: " + minuteDifference);
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 0, comesInMin));
-                                Log.d(TAG, "listedBusData added: " + entry.getKey().getNumber());
                             }
                         }
                     }
@@ -952,15 +928,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
 
                             if (minuteDifference <= 20) {
-                                if (currentHour * 60 + currentMin > Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    comesIn = "Left " + entry.getKey().getLastStationName() + " station " + minuteDifference + " minutes ago.";
-                                } else if (currentHour * 60 + currentMin <= Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    if (currentHour * 60 + currentMin == Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                        comesIn = "Leaves " + entry.getKey().getLastStationName() + " station right now.";
-                                    } else {
-                                        comesIn = "Leaves " + entry.getKey().getLastStationName() + " in " + minuteDifference + " minutes.";
-                                    }
-                                }
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 1, comesInMin));
                             }
                         }
@@ -975,15 +942,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             int minuteDifference = Math.abs((currentHour - Integer.valueOf(splitTime[0])) * 60 + (currentMin - Integer.valueOf(splitTime[1])));
 
                             if (minuteDifference <= 20) {
-                                if (currentHour * 60 + currentMin > Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    comesIn = "Left " + entry.getKey().getFirstStationName() + " station " + minuteDifference + " minutes ago.";
-                                } else if (currentHour * 60 + currentMin <= Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                    if (currentHour * 60 + currentMin == Integer.valueOf(splitTime[0]) * 60 + Integer.valueOf(splitTime[1])) {
-                                        comesIn = "Leaves " + entry.getKey().getFirstStationName() + " station right now.";
-                                    } else {
-                                        comesIn = "Leaves " + entry.getKey().getFirstStationName() + " in " + minuteDifference + " minutes.";
-                                    }
-                                }
                                 listedBusData.add(new ListedBusData(entry.getKey(), false, 0, comesInMin));
                             }
                         }
@@ -1036,7 +994,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     private void drawRouteForSelectedBus() {
 
-        Dialog dialog = new Dialog(MainActivity.this);
+        dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.bus_route);
         dialog.setCancelable(true);
@@ -1060,7 +1018,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         spinner.setAdapter(spinnerAdapter);
 
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @SuppressLint("SetTextI18n")
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
@@ -1070,8 +1027,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (selection.equals(bus.getKey())) {
                         firstStation.setVisibility(View.VISIBLE);
                         lastStation.setVisibility(View.VISIBLE);
-                        firstStation.setText(bus.getValue().getFirstStationName() + " -> " + bus.getValue().getLastStationName());
-                        lastStation.setText(bus.getValue().getLastStationName() + " -> " + bus.getValue().getFirstStationName());
+                        firstStation.setText(getString(R.string.from_where_to_where, bus.getValue().getFirstStationName(), bus.getValue().getLastStationName()));
+                        lastStation.setText(getString(R.string.from_where_to_where, bus.getValue().getLastStationName(), bus.getValue().getFirstStationName()));
                     }
                 }
             }
@@ -1102,19 +1059,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     private void readSettings() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        if (sharedPreferences.getBoolean(DARK_MAP_THEME, true)) {
-            mapboxMap.setStyle(Style.DARK);
-            for (Marker marker : stationsMarkers) {
-                marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station));
+        // Dark mode
+        if (!sharedPreferences.getBoolean(THEME_ACCOMMODATION, false)) {
+            if (sharedPreferences.getBoolean(DARK_MAP_THEME, true)) {
+                mapboxMap.setStyle(Style.DARK);
+                for (Marker marker : stationsMarkers) {
+                    marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station));
+                }
+            } else {
+                mapboxMap.setStyle(Style.LIGHT);
+                for (Marker marker : stationsMarkers) {
+                    marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station_light));
+                }
             }
-        } else {
-            mapboxMap.setStyle(Style.LIGHT);
-            for (Marker marker : stationsMarkers) {
-                marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station_light));
+        }
+        // Part of the day accommodation
+        if (sharedPreferences.getBoolean(THEME_ACCOMMODATION, false)) {
+            int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+            if (currentHour > 18) {
+                mapboxMap.setStyle(Style.DARK);
+                for (Marker marker : stationsMarkers) {
+                    marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station));
+                }
+            } else {
+                mapboxMap.setStyle(Style.LIGHT);
+                for (Marker marker : stationsMarkers) {
+                    marker.setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_bus_station_light));
+                }
             }
         }
         focusOnCurrentLocation = sharedPreferences.getBoolean(CURRENT_LOCATION_FOCUS, true);
         UPDATE_INTERVAL = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(UPDATE_FREQUENCY, "5000")));
+        UPDATE_PRIORITY = Integer.parseInt(Objects.requireNonNull(sharedPreferences.getString(SettingsFragment.UPDATE_PRIORITY, "102")));
     }
 
     /**
@@ -1122,9 +1098,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * of selected bus, based on if it's
      * weekend or not.
      */
-    @SuppressLint("SetTextI18n")
     private void getBusesProgram() {
-        Dialog dialog = new Dialog(MainActivity.this);
+        dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.bus_route);
         dialog.setCancelable(true);
@@ -1133,7 +1108,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         TextView text;
         text = dialog.findViewById(R.id.textView_drawRoute_select_bus);
-        text.setText("Select the bus to show it's program");
+        text.setText(getString(R.string.select_bus_to_show_its_program));
         RadioButton firstStation, lastStation;
         firstStation = dialog.findViewById(R.id.radioButtonRouting);
         lastStation = dialog.findViewById(R.id.radioButtonRouting2);
@@ -1161,8 +1136,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (selection.equals(bus.getKey())) {
                         firstStation.setVisibility(View.VISIBLE);
                         lastStation.setVisibility(View.VISIBLE);
-                        firstStation.setText(bus.getValue().getFirstStationName() + " -> " + bus.getValue().getLastStationName());
-                        lastStation.setText(bus.getValue().getLastStationName() + " -> " + bus.getValue().getFirstStationName());
+                        firstStation.setText(getString(R.string.from_where_to_where, bus.getValue().getFirstStationName(), bus.getValue().getLastStationName()));
+                        lastStation.setText(getString(R.string.from_where_to_where, bus.getValue().getLastStationName(), bus.getValue().getFirstStationName()));
                     }
                 }
             }
@@ -1186,14 +1161,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Calendar calendar = Calendar.getInstance();
 
             if (firstStation.isSelected()) {
-                if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
                         calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                     modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationLeavingTimeWeekend());
                 } else {
                     modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getFirstStationLeavingTime());
                 }
             } else {
-                if(calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
                         calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                     modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, Objects.requireNonNull(buses.get(spinner.getSelectedItem().toString())).getLastStationLeavingTimeWeekend());
                 } else {

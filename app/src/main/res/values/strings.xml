@@ -12,9 +12,9 @@
     <string name="no_routes_found">No routes found</string>
     <string name="apply">Apply</string>
     <string name="current_status">Current status: </string>
-    <string name="closest_station">Closest station: </string>
+    <string name="closest_station">Closest station: %1$s</string>
     <string name="user_id">User ID:</string>
-    <string name="current_speed">Current speed:</string>
+    <string name="current_speed">Current speed: %1$s</string>
     <string name="select_station">Select station</string>
     <string name="offline_bus_program">Offline bus program</string>
     <string name="change_status_and_or_bus">Change status and/or bus</string>
@@ -22,6 +22,7 @@
     <string name="please_choose_your_current_bus">Please choose your current bus:</string>
     <string name="update_data">Update data</string>
     <string name="successfully_updated">Successfully updated!</string>
+    <string name="from_where_to_where">%1$s - %2$s</string>
     <string name="no_routes_access_token">No routes found, make sure you set the right user and access token.</string>
     <string name="select_the_station_where_you_want_to_go">Select the station where you want to go:</string>
     <string-array name="bus_numbers">
@@ -51,7 +52,7 @@
         <item>43</item>
         <item>44</item>
     </string-array>
-    <string name="list_of_all_buses_heading_to">List of all buses heading to:</string>
+    <string name="list_of_all_buses_heading_to">List of all buses heading to: %1$s</string>
     <string name="show_route_for_bus">Show route for bus</string>
     <string name="select_the_bus_to_show_it_s_route">Select the bus to show it\'s route</string>
     <string name="firststation">FirstStation</string>
@@ -66,6 +67,8 @@
     <string name="real_time_bus_found">Real-time bus found!</string>
     <string name="no_real_time_bus_found">No real-time bus found!</string>
     <string name="notification_channel_id">bustracker.ms.sapientia.ro</string>
+    <string name="app_is_running_in_the_background">App is running in the background</string>
+    <string name="select_bus_to_show_its_program">Select the bus to show it\'s program</string>
     <string-array name="update_frequency_options">
         <item>Fastest</item>
         <item>5 seconds</item>
@@ -75,5 +78,15 @@
         <item>1000</item>
         <item>5000</item>
         <item>10000</item>
+    </string-array>
+    <string-array name="update_priority_options">
+        <item>Battery efficient</item>
+        <item>Balanced</item>
+        <item>High performance</item>
+    </string-array>
+    <string-array name="update_priority_options_values">
+        <item>104</item>
+        <item>102</item>
+        <item>100</item>
     </string-array>
 </resources>

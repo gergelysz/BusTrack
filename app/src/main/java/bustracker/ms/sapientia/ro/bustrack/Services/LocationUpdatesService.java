@@ -1,41 +1,47 @@
 package bustracker.ms.sapientia.ro.bustrack.Services;
 
-import android.annotation.SuppressLint;
+import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.provider.Settings;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 
 import bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity;
+import bustracker.ms.sapientia.ro.bustrack.BuildConfig;
+import bustracker.ms.sapientia.ro.bustrack.R;
 
-public class LocationUpdatesService extends Service implements LocationListener {
+import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.currentUserId;
+import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.firestoreDb;
 
-    private LocationManager locationManager;
-    private static final String TAG = "LocationUpdatesService";
-    private Location location = null;
-    private final Handler mHandler = new Handler();
-    private Timer mTimer = null;
+public class LocationUpdatesService extends Service implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
+    public static final String TAG = LocationUpdatesService.class.getSimpleName();
+    private static final long LOCATION_REQUEST_INTERVAL = 10000;
+    private static final float LOCATION_REQUEST_DISPLACEMENT = 5.0f;
+    private GoogleApiClient mGoogleApiClient;
+    private FusedLocationProviderClient mFusedLocationProviderClient;
+    private LocationRequest mLocationRequest;
+    private LocationCallback mLocationCallback;
     private Intent intentService;
-
-    /**
-     * If the app is closed from 'Recent items'
-     * then stop this service and all of its tasks.
-     */
-    @Override
-    public void onTaskRemoved(Intent rootIntent) {
-        locationManager.removeUpdates(this);
-        mTimer.cancel();
-        stopSelf();
-    }
 
     @Nullable
     @Override
@@ -47,76 +53,138 @@ public class LocationUpdatesService extends Service implements LocationListener 
     public void onCreate() {
         super.onCreate();
 
-        /* Create thread to run timer on, with location updates. */
-        mTimer = new Timer();
-        mTimer.schedule(new TimerTaskToGetLocation(), 0, MainActivity.UPDATE_INTERVAL);
         intentService = new Intent("service.to.activity.send.data");
+
+        buildGoogleApiClient();
+        showNotificationAndStartForegroundService();
+
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                //here you get the continues location updated based on the interval defined in
+                //location request
+                sendUpdatesToMainActivity(locationResult.getLastLocation());
+            }
+        };
     }
 
     @Override
-    public void onLocationChanged(Location location) {
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        return START_NOT_STICKY;
     }
 
     /**
-     * Function to request location updates
-     * firstly based on network connection,
-     * which is more battery friendly but inaccurate,
-     * then based on GPS data, which is heavier on
-     * resources but more accurate.
+     * Method used for building GoogleApiClient and add connection callback
      */
-    @SuppressLint("MissingPermission")
-    private void getLocationUpdates() {
-        locationManager = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
-        boolean isGPSEnable = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        boolean isNetworkEnable = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    private synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        mGoogleApiClient.connect();
+    }
 
-        if (!isGPSEnable && !isNetworkEnable) {
-            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+    /**
+     * Method used for creating location request
+     * After successfully connection of the GoogleClient ,
+     * This method used for to request continues location
+     */
+    private void createLocationRequest() {
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(MainActivity.UPDATE_PRIORITY);
+        mLocationRequest.setInterval(MainActivity.UPDATE_INTERVAL);
+        mLocationRequest.setFastestInterval(MainActivity.UPDATE_INTERVAL);
+        mLocationRequest.setMaxWaitTime(MainActivity.UPDATE_INTERVAL + 10);
+        mLocationRequest.setSmallestDisplacement(0);
+
+        requestLocationUpdate();
+    }
+
+    /**
+     * Method used for the request new location using Google FusedLocation Api
+     */
+    private void requestLocationUpdate() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+//        mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(this::sendUpdatesToMainActivity);
+        mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
+    }
+
+    private void removeLocationUpdate() {
+        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+    }
+
+    /**
+     * This Method shows notification for ForegroundService
+     * Start Foreground Service and Show Notification to user for android all version
+     */
+    private void showNotificationAndStartForegroundService() {
+
+        final String CHANNEL_ID = BuildConfig.APPLICATION_ID.concat("_notification_id");
+        final String CHANNEL_NAME = BuildConfig.APPLICATION_ID.concat("_notification_name");
+        final int NOTIFICATION_ID = 100;
+
+        NotificationCompat.Builder builder;
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            int importance = NotificationManager.IMPORTANCE_NONE;
+            assert notificationManager != null;
+            NotificationChannel mChannel = notificationManager.getNotificationChannel(CHANNEL_ID);
+            if (mChannel == null) {
+                mChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance);
+                notificationManager.createNotificationChannel(mChannel);
+            }
+            builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+            builder.setSmallIcon(R.drawable.ic_bus_station)
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText(getString(R.string.app_is_running_in_the_background));
+            startForeground(NOTIFICATION_ID, builder.build());
         } else {
-            if (isGPSEnable) {
-                location = null;
-                if (locationManager != null) {
-                    locationManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, this, null);
-                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                }
-            }
-            if (isNetworkEnable && location == null) {
-                if (locationManager != null) {
-                    locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, this, null);
-                    location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                }
-            }
-
-            if (locationManager != null) {
-                locationManager.removeUpdates(this);
-            }
-            if (location != null) {
-                sendUpdatesToMainActivity(location);
-            }
+            builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+            builder.setSmallIcon(R.drawable.ic_bus_station)
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText(getString(R.string.app_is_running_in_the_background));
+            startForeground(NOTIFICATION_ID, builder.build());
         }
     }
 
-    /**
-     * Timer task to run getLocationUpdates() in a
-     * fixed interval set by the user in Settings.
-     */
-    private class TimerTaskToGetLocation extends TimerTask {
-        @Override
-        public void run() {
-            mHandler.post(LocationUpdatesService.this::getLocationUpdates);
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        createLocationRequest();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        removeLocationUpdate();
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
         }
+        if (currentUserId != null) {
+            firestoreDb.collection("users").document(currentUserId).delete();
+            currentUserId = null;
+        }
+        stopForeground(true);
+        stopSelf();
+        android.os.Process.killProcess(android.os.Process.myPid());
+
     }
 
     /**

@@ -10,6 +10,14 @@
         android:title="Dark map theme" />
     <SwitchPreference
         android:checked="true"
+        android:defaultValue="false"
+        android:icon="@drawable/ic_time"
+        android:key="switch_theme_based_on_hour"
+        android:summaryOff="Theme accommodation disabled"
+        android:summaryOn="Theme accommodation enabled"
+        android:title="Theme based on part of the day" />
+    <SwitchPreference
+        android:checked="true"
         android:defaultValue="true"
         android:icon="@drawable/ic_current_location"
         android:key="switch_current_location"
@@ -23,4 +31,11 @@
         android:icon="@drawable/ic_cloud"
         android:key="list_update_frequency"
         android:title="Location update frequency" />
+    <ListPreference
+        android:defaultValue="102"
+        android:entries="@array/update_priority_options"
+        android:entryValues="@array/update_priority_options_values"
+        android:icon="@drawable/ic_battery"
+        android:key="list_update_priority"
+        android:title="Location update priority" />
 </PreferenceScreen>
