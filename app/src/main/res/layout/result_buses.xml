@@ -17,7 +17,7 @@
         android:id="@+id/editText_result_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/modernsans"
+        android:fontFamily="@font/modern_sans"
         android:text="@string/list_of_all_buses_heading_to"
         android:textColor="@color/white"
         android:textSize="16sp" />

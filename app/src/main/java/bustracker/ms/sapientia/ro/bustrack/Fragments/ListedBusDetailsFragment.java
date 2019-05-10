@@ -1,7 +1,6 @@
 package bustracker.ms.sapientia.ro.bustrack.Fragments;
 
 
-import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
@@ -10,18 +9,17 @@ import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mapbox.api.directions.v5.DirectionsCriteria;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
-import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
@@ -51,13 +49,11 @@ public class ListedBusDetailsFragment extends DialogFragment {
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
     private MapView mapViewListedRouteForUser;
-    private double distanceToClosestStation = 2000000;
 
     public ListedBusDetailsFragment() {
         // Required empty public constructor
     }
 
-    @SuppressLint({"SetTextI18n", "LogNotTimber"})
     @Override
     public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -84,7 +80,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
         String selectedStation = getArguments().getString("selectedStation");
         assert selectedStation != null;
 
-        textViewInfoForBus.setText("Info for bus: " + listedBusData.getBus().getNumber());
+        textViewInfoForBus.setText(getString(R.string.info_for_bus, listedBusData.getBus().getNumber()));
 
         LatLng closest = new LatLng();
         Location locationStation = new Location("");
@@ -100,6 +96,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
         float comesInAround;
 
         // From first station to last
+        int speedIsXMetersPerMinute = 500;
         if (listedBusData.getDirection() == 0) {
             for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
                 // If bus goes through that station
@@ -133,20 +130,28 @@ public class ListedBusDetailsFragment extends DialogFragment {
             closestStation.setLatitude(closest.getLatitude());
             closestStation.setLongitude(closest.getLongitude());
 
-            comesInAround = closestStation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute  500m/min = 30km/h
+            comesInAround = closestStation.distanceTo(busLocation) / speedIsXMetersPerMinute; // speedIsXMetersPerMinute  500m/min = 30km/h
             comesInAround = Math.round(comesInAround);
 
             // Bus already left
             if (listedBusData.getComesInMin() > 0) {
                 if (numberOfStationsBetween + comesInAround - listedBusData.getComesInMin() > 0) {
-                    textViewArrivesIn.setText("Arrives in " + Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) + " minutes.");
+                    if (Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) == 1) {
+                        textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 1, Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin())));
+                    } else {
+                        textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 2, Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin())));
+                    }
                 } else {
-                    textViewArrivesIn.setText("Probably left.");
+                    textViewArrivesIn.setText(getString(R.string.probably_left));
                 }
             }
             // Bus will leave sometime
             else if (listedBusData.getComesInMin() < 0) {
-                textViewArrivesIn.setText("Arrives in " + Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) + " minutes.");
+                if (Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) == 1) {
+                    textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 1, Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround)));
+                } else {
+                    textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 2, Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround)));
+                }
             }
         }
         // From last station to first
@@ -183,20 +188,28 @@ public class ListedBusDetailsFragment extends DialogFragment {
             closestStation.setLatitude(closest.getLatitude());
             closestStation.setLongitude(closest.getLongitude());
 
-            comesInAround = closestStation.distanceTo(busLocation) / 500; // speedIsXMetersPerMinute  500m/min = 30km/h
+            comesInAround = closestStation.distanceTo(busLocation) / speedIsXMetersPerMinute; // speedIsXMetersPerMinute  500m/min = 30km/h
             comesInAround = Math.round(comesInAround);
 
             // Bus already left
             if (listedBusData.getComesInMin() > 0) {
                 if (numberOfStationsBetween + comesInAround - listedBusData.getComesInMin() > 0) {
-                    textViewArrivesIn.setText("Arrives in " + Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) + " minutes.");
+                    if (Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin()) == 1) {
+                        textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 1, Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin())));
+                    } else {
+                        textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 2, Math.round(numberOfStationsBetween + comesInAround - listedBusData.getComesInMin())));
+                    }
                 } else {
-                    textViewArrivesIn.setText("Probably left.");
+                    textViewArrivesIn.setText(getString(R.string.probably_left));
                 }
             }
             // Bus will leave sometime
             else if (listedBusData.getComesInMin() < 0) {
-                textViewArrivesIn.setText("Arrives in " + Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) + " minutes.");
+                if (Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround) == 1) {
+                    textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 1, Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround)));
+                } else {
+                    textViewArrivesIn.setText(getResources().getQuantityString(R.plurals.arrives_in, 2, Math.round(Math.abs(listedBusData.getComesInMin()) + numberOfStationsBetween + comesInAround)));
+                }
             }
         }
 
@@ -212,14 +225,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
                 mapboxMap.setStyle(Style.LIGHT);
             }
 
-            // Map is set up and the style has loaded.
-            // Now you can add data or make other map adjustments
-
-            mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder()
-                            .target(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)))
-                            .zoom(16)
-                            .build()),
-                    1000);
+            mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)), 16));
 
             assert Mapbox.getAccessToken() != null;
             NavigationRoute.Builder builder = NavigationRoute.builder(getActivity())
@@ -234,17 +240,14 @@ public class ListedBusDetailsFragment extends DialogFragment {
                         public void onResponse(@NonNull Call<DirectionsResponse> call, @NonNull Response<DirectionsResponse> response) {
                             // You can get the generic HTTP info about the response
                             // 200 = SUCCESS
-                            Log.d(TAG, "Response code: " + response.code());
                             if (response.body() == null) {
-                                Log.e(TAG, getString(R.string.no_routes_access_token));
+                                Toast.makeText(getActivity(), "No route access token!", Toast.LENGTH_SHORT).show();
                                 return;
                             } else if (response.body().routes().size() < 1) {
-                                Log.e(TAG, getString(R.string.no_routes_found));
+                                Toast.makeText(getActivity(), "No routes found!", Toast.LENGTH_SHORT).show();
                                 return;
                             }
-
                             currentRoute = response.body().routes().get(0);
-
                             // Draw the route on the map
                             if (navigationMapRoute != null) {
                                 navigationMapRoute.updateRouteVisibilityTo(false);
@@ -256,7 +259,7 @@ public class ListedBusDetailsFragment extends DialogFragment {
 
                         @Override
                         public void onFailure(@NonNull Call<DirectionsResponse> call, @NonNull Throwable throwable) {
-                            Log.e(TAG, "Error: " + throwable.getMessage());
+                            Toast.makeText(getActivity(), "Error: " + throwable.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
         });

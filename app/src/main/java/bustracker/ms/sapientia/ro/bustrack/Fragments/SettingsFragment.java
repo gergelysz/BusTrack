@@ -41,7 +41,7 @@ public class SettingsFragment extends PreferenceFragment {
         switchDarkMode.setOnPreferenceChangeListener((preference, newValue) -> {
             if(!switchThemeAccommodation.isChecked()) {
                 switchDarkMode.setChecked(false);
-                switchDarkMode.setEnabled(false);
+                switchDarkMode.setEnabled(true);
             }
             return true;
         });

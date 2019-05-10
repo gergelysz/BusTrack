@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:text="@string/select_the_bus_to_show_it_s_route"
             android:textColor="@color/white"
-            android:fontFamily="@font/modernsans"
+            android:fontFamily="@font/modern_sans"
             android:layout_centerHorizontal="true"
             android:textSize="16sp" />
 
@@ -44,8 +44,8 @@
                 android:id="@+id/radioButtonRouting"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/modernsans"
-                android:text="@string/firststation"
+                android:fontFamily="@font/modern_sans"
+                android:text="@string/firstStation"
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
@@ -53,8 +53,8 @@
                 android:id="@+id/radioButtonRouting2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/modernsans"
-                android:text="@string/laststation"
+                android:fontFamily="@font/modern_sans"
+                android:text="@string/lastStation"
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
@@ -66,10 +66,10 @@
             android:layout_height="32dp"
             android:layout_below="@id/radioGroupRouting"
             android:layout_centerHorizontal="true"
-            android:background="@color/darkergray"
+            android:background="@color/darkerGray"
             android:text="@string/apply"
             android:textSize="12sp"
-            android:fontFamily="@font/modernsans"
+            android:fontFamily="@font/modern_sans"
             android:textColor="@color/white" />
 
 

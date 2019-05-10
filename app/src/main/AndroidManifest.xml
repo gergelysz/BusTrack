@@ -28,9 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".Fragments.ListedBusDetailsFragment"
-            tools:ignore="InnerclassSeparator" />
 
         <service
             android:name=".Services.LocationUpdatesService"

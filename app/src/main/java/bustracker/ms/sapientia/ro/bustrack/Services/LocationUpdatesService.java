@@ -35,8 +35,6 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
         GoogleApiClient.OnConnectionFailedListener {
 
     public static final String TAG = LocationUpdatesService.class.getSimpleName();
-    private static final long LOCATION_REQUEST_INTERVAL = 10000;
-    private static final float LOCATION_REQUEST_DISPLACEMENT = 5.0f;
     private GoogleApiClient mGoogleApiClient;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private LocationRequest mLocationRequest;
@@ -62,8 +60,6 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-                //here you get the continues location updated based on the interval defined in
-                //location request
                 sendUpdatesToMainActivity(locationResult.getLastLocation());
             }
         };
@@ -99,7 +95,6 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
         mLocationRequest.setFastestInterval(MainActivity.UPDATE_INTERVAL);
         mLocationRequest.setMaxWaitTime(MainActivity.UPDATE_INTERVAL + 10);
         mLocationRequest.setSmallestDisplacement(0);
-
         requestLocationUpdate();
     }
 
@@ -113,8 +108,10 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
                         != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-//        mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(this::sendUpdatesToMainActivity);
-        mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
+        mFusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
+            sendUpdatesToMainActivity(location);
+            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null);
+        });
     }
 
     private void removeLocationUpdate() {

@@ -2,6 +2,8 @@
   <dictionary name="gergelysz">
     <words>
       <w>firestore</w>
+      <w>mapbox</w>
+      <w>waypoint</w>
     </words>
   </dictionary>
 </component>
