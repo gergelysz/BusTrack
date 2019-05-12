@@ -1,6 +1,5 @@
 package bustracker.ms.sapientia.ro.bustrack.Adapter;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -23,8 +22,6 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         super(context, 0, listedBuses);
     }
 
-
-    @SuppressLint("SetTextI18n")
     @NotNull
     @Override
     public View getView(int position, View convertView, @NotNull ViewGroup parent) {
@@ -39,7 +36,6 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
 
         // Lookup view for data population
         TextView textViewBusNumber = convertView.findViewById(R.id.textView_result_bus_number);
-        TextView textViewRealTimeBusData = convertView.findViewById(R.id.textView_result_bus_info);
         TextView textViewBusComesIn = convertView.findViewById(R.id.textView_result_bus_comesIn);
 
         // Populate the data into the template view using the data object
@@ -57,33 +53,46 @@ public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {
         textViewBusNumber.setText(listedBusData.getBus().getNumber());
 
         if (listedBusData.isRealTime()) {
-            textViewRealTimeBusData.setTextColor(Color.GREEN);
-            textViewRealTimeBusData.setText(getContext().getString(R.string.real_time_bus_found));
-            textViewBusComesIn.setVisibility(View.GONE);
+            textViewBusComesIn.setTextColor(Color.GREEN);
+            textViewBusComesIn.setText(getContext().getString(R.string.real_time_bus_found));
         } else {
-            textViewRealTimeBusData.setTextColor(Color.WHITE);
-            textViewRealTimeBusData.setText(getContext().getString(R.string.no_real_time_bus_found));
 
             int comesInAbs = Math.abs(listedBusData.getComesInMin());
 
             if (listedBusData.getComesInMin() < 0) {
                 if (listedBusData.getDirection() == 0) {
-                    textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation in " + comesInAbs + " minutes.");
+                    if(comesInAbs == 1) {
+                        textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.leaves_station_in_minutes, 1, comesInAbs, listedBusData.getBus().getFirstStationName()));
+                    } else {
+                        textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.leaves_station_in_minutes, 2, comesInAbs,listedBusData.getBus().getFirstStationName()));
+                    }
                 } else {
-                    textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation in " + comesInAbs + " minutes.");
+                    if(comesInAbs == 1) {
+                        textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.leaves_station_in_minutes, 1, comesInAbs, listedBusData.getBus().getLastStationName()));
+                    } else {
+                        textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.leaves_station_in_minutes, 2, comesInAbs,listedBusData.getBus().getLastStationName()));
+                    }
                 }
             } else {
                 if (listedBusData.getComesInMin() == 0) {
                     if (listedBusData.getDirection() == 0) {
-                        textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getFirstStationName() + "\nstation right now.");
+                        textViewBusComesIn.setText(getContext().getString(R.string.leaves_station_right_now, listedBusData.getBus().getFirstStationName()));
                     } else {
-                        textViewBusComesIn.setText("Leaves " + listedBusData.getBus().getLastStationName() + "\nstation right now.");
+                        textViewBusComesIn.setText(getContext().getString(R.string.leaves_station_right_now, listedBusData.getBus().getLastStationName()));
                     }
                 } else {
                     if (listedBusData.getDirection() == 0) {
-                        textViewBusComesIn.setText("Left " + listedBusData.getBus().getFirstStationName() + "\nstation " + comesInAbs + " minutes ago.");
+                        if(comesInAbs == 1) {
+                            textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.left_station_minutes_ago, 1, comesInAbs, listedBusData.getBus().getFirstStationName()));
+                        } else {
+                            textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.left_station_minutes_ago, 2, comesInAbs, listedBusData.getBus().getFirstStationName()));
+                        }
                     } else {
-                        textViewBusComesIn.setText("Left " + listedBusData.getBus().getLastStationName() + "\nstation " + comesInAbs + " minutes ago.");
+                        if(comesInAbs == 1) {
+                            textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.left_station_minutes_ago, 1, comesInAbs, listedBusData.getBus().getLastStationName()));
+                        } else {
+                            textViewBusComesIn.setText(getContext().getResources().getQuantityString(R.plurals.left_station_minutes_ago, 2, comesInAbs, listedBusData.getBus().getLastStationName()));
+                        }
                     }
                 }
             }

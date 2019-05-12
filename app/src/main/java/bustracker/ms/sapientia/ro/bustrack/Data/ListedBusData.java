@@ -29,39 +29,20 @@ public class ListedBusData extends Bus implements Serializable {
         return bus;
     }
 
-    public void setBus(Bus bus) {
-        this.bus = bus;
-    }
-
     public int getDirection() {
         return direction;
-    }
-
-    public void setDirection(int direction) {
-        this.direction = direction;
     }
 
     public int getComesInMin() {
         return comesInMin;
     }
 
-    public void setComesInMin(int comesInMin) {
-        this.comesInMin = comesInMin;
-    }
-
     public User getUser() {
         return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
     }
 
     public boolean isRealTime() {
         return realTime;
     }
 
-    public void setRealTime(boolean realTime) {
-        this.realTime = realTime;
-    }
 }

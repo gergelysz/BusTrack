@@ -28,13 +28,12 @@ import bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity;
 import bustracker.ms.sapientia.ro.bustrack.BuildConfig;
 import bustracker.ms.sapientia.ro.bustrack.R;
 
-import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.currentUserId;
+import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.currentUser;
 import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.firestoreDb;
 
 public class LocationUpdatesService extends Service implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
-    public static final String TAG = LocationUpdatesService.class.getSimpleName();
     private GoogleApiClient mGoogleApiClient;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private LocationRequest mLocationRequest;
@@ -123,7 +122,6 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
      * Start Foreground Service and Show Notification to user for android all version
      */
     private void showNotificationAndStartForegroundService() {
-
         final String CHANNEL_ID = BuildConfig.APPLICATION_ID.concat("_notification_id");
         final String CHANNEL_NAME = BuildConfig.APPLICATION_ID.concat("_notification_name");
         final int NOTIFICATION_ID = 100;
@@ -174,9 +172,9 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
-        if (currentUserId != null) {
-            firestoreDb.collection("users").document(currentUserId).delete();
-            currentUserId = null;
+        if (currentUser.getId() != null) {
+            firestoreDb.collection("users").document(currentUser.getId()).delete();
+            currentUser.setId(null);
         }
         stopForeground(true);
         stopSelf();

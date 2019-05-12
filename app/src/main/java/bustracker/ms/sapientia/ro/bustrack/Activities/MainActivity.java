@@ -25,7 +25,6 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -93,6 +92,7 @@ import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPD
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
 
+    @SuppressLint("StaticFieldLeak")
     private static MainActivity instance;
 
     public static MainActivity getInstance() {
@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean loaded = false;
     private static final String TAG = "MainActivity";
 
-    private User currentUser = null;
+    public static User currentUser = null;
 
     private final Map<String, Bus> buses = new HashMap<>();
     private final Map<String, Marker> usersMarkers = new HashMap<>();
@@ -120,13 +120,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private Marker currentUserMarker;
     private Location currentLocation;
-    private String latitude;
-    private String longitude;
-    private String currentBus = "0";
-    private String currentStatus = "waiting for bus";
-    public static String currentUserId = null;
-    private String currentDirection = "0";
-    private String currentSpeed = "0";
     private String selectedStation = "";
 
     private TextView userIdTextView;
@@ -135,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private TextView userStatusTextView;
     private ImageView userStatusImageView;
 
-    private double distanceToClosestStation = 2000000;
+    private float distanceToClosestStation;
     private String closestStationName = "";
 
     private NavigationMapRoute navigationMapRoute;
@@ -217,28 +210,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        if (id == R.id.action_settings) {
-            startActivity(new Intent(MainActivity.this, SettingsActivity.class));
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
 
         switch (item.getItemId()) {
@@ -301,32 +272,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         currentLocation = new Location("");
+
+        currentUser = new User("0", "waiting for bus", Timestamp.now(), null, null, "0", "0");
+
         broadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                distanceToClosestStation = 20000;
+                Location locationStation = new Location("calcClosest");
                 if (intent != null) {
                     if (!mapView.isDestroyed()) {
-                        latitude = intent.getStringExtra("latitude");
-                        longitude = intent.getStringExtra("longitude");
-                        currentSpeed = intent.getStringExtra("speed");
+                        currentUser.setLatitude(intent.getStringExtra("latitude"));
+                        currentUser.setLongitude(intent.getStringExtra("longitude"));
+                        currentUser.setSpeed(intent.getStringExtra("speed"));
 
                         uploadCurrentUserData();
 
-                        currentLocation.setLatitude(Float.valueOf(latitude));
-                        currentLocation.setLongitude(Float.valueOf(longitude));
+                        currentLocation.setLatitude(Float.valueOf(currentUser.getLatitude()));
+                        currentLocation.setLongitude(Float.valueOf(currentUser.getLongitude()));
 
                         if (focusOnCurrentLocation) {
-                            setCameraPosition(currentLocation);
+                            setCameraPosition(new LatLng(Float.valueOf(currentUser.getLatitude()), Float.valueOf(currentUser.getLongitude())));
                         }
 
-                        /*
-                                Get all bus data and calculate
-                                the closest distance to current location.
-                         */
-
+                        // Get closest station
                         for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
-                            Location locationStation = new Location("calcClosest");
-
                             locationStation.setLatitude(entry.getValue().getLatitude());
                             locationStation.setLongitude(entry.getValue().getLongitude());
 
@@ -336,8 +306,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             }
                         }
                         closestStationTextView.setText(getString(R.string.closest_station, closestStationName));
-                        speedTextView.setText(getString(R.string.current_speed, currentSpeed));
-                        currentSpeed = String.valueOf(currentLocation.getSpeed());
+                        speedTextView.setText(getString(R.string.current_speed, currentUser.getSpeed()));
                     }
                 }
             }
@@ -375,8 +344,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      *
      * @param location - the given location
      */
-    private void setCameraPosition(Location location) {
-        mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 15));
+    private void setCameraPosition(LatLng location) {
+        mapboxMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 15));
     }
 
     @Override
@@ -425,9 +394,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         mapView.onDestroy();
         unregisterReceiver(broadcastReceiver);
-        if (currentUserId != null) {
-            firestoreDb.collection("users").document(currentUserId).delete();
-            currentUserId = null;
+        if (currentUser.getId() != null) {
+            firestoreDb.collection("users").document(currentUser.getId()).delete();
+            currentUser.setId(null);// = null;
         }
         super.onDestroy();
     }
@@ -468,35 +437,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * data in the Firestore database.
      */
     private void uploadCurrentUserData() {
-        if (currentUserId == null && !loaded) {
-            currentUser = new User(currentBus, currentStatus, Timestamp.now(), latitude, longitude, currentDirection, currentSpeed);
-            userStatusTextView.setText(getString(R.string.current_status, currentStatus));
+        if (currentUser.getId() == null && !loaded) {
+            userStatusTextView.setText(getString(R.string.current_status, currentUser.getStatus()));
             firestoreDb.collection("users").add(currentUser)
-                    .addOnSuccessListener(documentReference -> currentUserId = documentReference.getId())
+                    .addOnSuccessListener(documentReference -> currentUser.setId(documentReference.getId()))
                     .addOnFailureListener(e -> Toast.makeText(MainActivity.this, (getString(R.string.user_data_upload_fail_details) + e.getMessage()), Toast.LENGTH_SHORT).show());
             loaded = true;
             currentUserMarker = mapboxMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)))
+                    .position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
                     .title("You")
                     .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user))
             );
-        } else if (currentUserId != null && loaded) {
-            currentUser.setBus(currentBus);
-            currentUser.setStatus(currentStatus);
-            currentUser.setLatitude(latitude);
-            currentUser.setLongitude(longitude);
+        } else if (currentUser.getId() != null && loaded) {
             currentUser.setTimestamp(Timestamp.now());
-            currentUser.setId(currentUserId);
-            currentUser.setDirection(currentDirection);
-            currentUser.setSpeed(currentSpeed);
 
-            currentUserMarker.setPosition(new LatLng(Float.valueOf(latitude), Float.valueOf(longitude)));
+            currentUserMarker.setPosition(
+                    new LatLng(
+                            Float.valueOf(currentUser.getLatitude()),
+                            Float.valueOf(currentUser.getLongitude())
+                    )
+            );
 
             firestoreDb.collection("users")
                     .document(currentUser.getId())
                     .set(currentUser);
 
-            userIdTextView.setText(getResources().getString(R.string.user_id, currentUserId));
+            userIdTextView.setText(getResources().getString(R.string.user_id, currentUser.getId()));
         }
     }
 
@@ -514,7 +480,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (!mapView.isDestroyed()) {
                     userIds.add(documentSnapshot.getId());
                     // if user isn't yet in the local users list
-                    if (!documentSnapshot.getId().equals(currentUserId) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
+                    if (!documentSnapshot.getId().equals(currentUser.getId()) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
                         User newUser = new User(
                                 documentSnapshot.getId(),
                                 documentSnapshot.getString("bus"),
@@ -536,7 +502,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
                     }
                     // user is already in the local users list
-                    else if (!documentSnapshot.getId().equals(currentUserId) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
+                    else if (!documentSnapshot.getId().equals(currentUser.getId()) && usersMarkers.keySet().contains(documentSnapshot.getId())) {
                         if (Objects.equals(documentSnapshot.getString("status"), "on bus")) {
                             LatLng newPosition = new LatLng(
                                     Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
@@ -652,25 +618,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         spinner.setAdapter(spinnerAdapter);
 
         imageWaitingForBus.setOnClickListener(v -> {
-            currentStatus = "waiting for bus";
+            currentUser.setStatus("waiting for bus");
             userStatusImageView.setImageResource(R.drawable.ic_waiting_for_bus);
-            userStatusTextView.setText(getString(R.string.current_status, currentStatus));
-            currentBus = "0";
+            userStatusTextView.setText(getString(R.string.current_status, currentUser.getStatus()));
+            currentUser.setBus("0");
             Snackbar.make(findViewById(R.id.mapView), R.string.successfully_updated, Snackbar.LENGTH_SHORT).show();
             dialog.cancel();
         });
 
         imageOnBus.setOnClickListener(v -> {
-            currentStatus = "on bus";
+            currentUser.setStatus("on bus");
             userStatusImageView.setImageResource(R.drawable.ic_bus);
-            userStatusTextView.setText(getString(R.string.current_status, currentStatus));
+            userStatusTextView.setText(getString(R.string.current_status, currentUser.getStatus()));
             textView.setVisibility(View.VISIBLE);
             spinner.setVisibility(View.VISIBLE);
             applyButton.setVisibility(View.VISIBLE);
         });
 
         applyButton.setOnClickListener(v -> {
-            currentBus = spinner.getSelectedItem().toString();
+            currentUser.setBus(spinner.getSelectedItem().toString());
             Snackbar.make(findViewById(R.id.mapView), R.string.successfully_updated, Snackbar.LENGTH_SHORT).show();
             dialog.cancel();
         });
@@ -787,7 +753,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         spinner.setAdapter(spinnerAdapter);
 
         buttonSelectedRouteApply.setOnClickListener(v -> {
-
             if (spinner.isEnabled()) {
                 selectedStation = spinner.getSelectedItem().toString();
             } else {
@@ -801,10 +766,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 for (Bus bus : buses.values()) {
                     if (bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation)) {
                         resultBuses.put(bus, 0);
-                        currentDirection = "0";
+                        currentUser.setDirection("0");
                     } else if (bus.getStationsFromLastStation().contains(selectedStation) || bus.getFirstStationName().equals(selectedStation)) {
                         resultBuses.put(bus, 1);
-                        currentDirection = "1";
+                        currentUser.setDirection("1");
                     }
                 }
             }
@@ -815,40 +780,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             TextView textViewHeadingTo = dialog.findViewById(R.id.editText_result_title);
             textViewHeadingTo.setText(getString(R.string.list_of_all_buses_heading_to, selectedStation));
 
+            // Get the location of the selected station
             Location selectedStationLocation = new Location("");
-            for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
-                String key = entry.getKey();
-                LatLng value = entry.getValue();
-                if (key.equals(selectedStation)) {
-                    selectedStationLocation.setLatitude(value.getLatitude());
-                    selectedStationLocation.setLongitude(value.getLongitude());
-                    break;
+            selectedStationLocation.setLatitude(Objects.requireNonNull(stations.get(selectedStation)).getLatitude());
+            selectedStationLocation.setLongitude(Objects.requireNonNull(stations.get(selectedStation)).getLongitude());
+
+            /*
+                Searches for real-time bus
+                in the list of users.
+            */
+            for (User user : users) {
+                Location busLocation = new Location("");
+                if (resultBuses.containsKey(buses.get(user.getBus()))
+                        && user.getStatus().equals("on bus")
+                        && user.getDirection().equals(currentUser.getDirection())) {
+                    busLocation.setLatitude(Float.parseFloat(user.getLatitude()));
+                    busLocation.setLongitude(Float.parseFloat(user.getLongitude()));
+                    listedBusData.add(new ListedBusData(buses.get(user.getBus()), true, Integer.valueOf(user.getDirection()), 2, user));
                 }
             }
 
+            /*
+                Approximately which bus should
+                come based on the program and check if
+                it's weekend or not
+             */
             for (Map.Entry<Bus, Integer> entry : resultBuses.entrySet()) {
-                /*
-                    Searches for real-time bus
-                    in the list of users.
-                 */
-                for (User user : users) {
-                    Location busLocation = new Location("");
-
-                    if (user.getBus().equals(entry.getKey().getNumber())
-                            && user.getStatus().equals("on bus")
-                            && user.getDirection().equals(currentDirection)
-                    ) {
-                        busLocation.setLatitude(Double.parseDouble(user.getLatitude()));
-                        busLocation.setLongitude(Double.parseDouble(user.getLongitude()));
-                        listedBusData.add(new ListedBusData(entry.getKey(), true, Integer.valueOf(user.getDirection()), 2, user));
-                    }
-                }
-
-                /*
-                    Approximately which bus should
-                    come based on the program and check if
-                    it's weekend or not
-                 */
                 Calendar calendar = Calendar.getInstance();
                 // If it's weekend
                 if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
@@ -924,7 +881,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     ListedBusDetailsFragment listedBusDetailsFragment = new ListedBusDetailsFragment();
                     // If the user clicked on the real-time bus
                     if (Objects.requireNonNull(listedBusAdapter.getItem(position)).getUser() != null) {
-                        Location userLoc = new Location("");
+                        LatLng userLoc = new LatLng();
                         userLoc.setLatitude(Float.parseFloat(Objects.requireNonNull(listedBusAdapter.getItem(position)).getUser().getLatitude()));
                         userLoc.setLongitude(Float.parseFloat(Objects.requireNonNull(listedBusAdapter.getItem(position)).getUser().getLongitude()));
                         setCameraPosition(userLoc);
@@ -934,8 +891,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     else {
                         Bundle bundle = new Bundle();
                         bundle.putSerializable("listedBusAdapter", listedBusAdapter.getItem(position));
-                        bundle.putString("latitude", latitude);
-                        bundle.putString("longitude", longitude);
+                        bundle.putString("latitude", currentUser.getLatitude());
+                        bundle.putString("longitude", currentUser.getLongitude());
                         bundle.putString("selectedStation", selectedStation);
                         bundle.putSerializable("stations", (Serializable) stations);
                         listedBusDetailsFragment.setArguments(bundle);

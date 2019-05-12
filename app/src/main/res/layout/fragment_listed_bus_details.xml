@@ -4,7 +4,6 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:mapbox="http://schemas.android.com/tools"
-    android:id="@+id/fragment_listedBusContainer"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="@drawable/popup_style_set"

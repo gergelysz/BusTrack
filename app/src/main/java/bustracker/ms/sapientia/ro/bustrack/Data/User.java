@@ -13,51 +13,6 @@ public class User {
     private String direction;
     private String speed;
 
-    User() {
-    }
-
-    public User(String bus, String status, Timestamp timestamp) {
-        this.bus = bus;
-        this.status = status;
-        this.timestamp = timestamp;
-    }
-
-    public User(String id, String bus, String status, Timestamp timestamp, String latitude, String longitude) {
-        this.id = id;
-        this.bus = bus;
-        this.status = status;
-        this.timestamp = timestamp;
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
-
-    public User(String bus, String status, Timestamp timestamp, String latitude, String longitude) {
-        this.bus = bus;
-        this.status = status;
-        this.timestamp = timestamp;
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
-
-    public User(String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction) {
-        this.bus = bus;
-        this.status = status;
-        this.timestamp = timestamp;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.direction = direction;
-    }
-
-    public User(String id, String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction) {
-        this.id = id;
-        this.bus = bus;
-        this.status = status;
-        this.timestamp = timestamp;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.direction = direction;
-    }
-
     public User(String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction, String speed) {
         this.bus = bus;
         this.status = status;
@@ -101,10 +56,6 @@ public class User {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public Timestamp getTimestamp() {
-        return timestamp;
     }
 
     public void setTimestamp(Timestamp timestamp) {

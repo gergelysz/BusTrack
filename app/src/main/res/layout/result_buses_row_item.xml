@@ -1,60 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="@color/darkerDarkGray"
     android:minWidth="400dp"
-    android:padding="12dp">
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/textView_result_bus_number"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/modern_sans"
-        android:text="27"
+        android:gravity="center"
         android:textColor="@color/white"
-        android:textSize="64sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="HardcodedText" />
-
-    <TextView
-        android:id="@+id/textView_result_bus_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="@font/modern_sans"
-        android:paddingStart="16dp"
-        android:text="Realtime bus not found!"
-        android:textColor="@color/white"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@id/textView_result_bus_comesIn"
-        app:layout_constraintLeft_toRightOf="@id/textView_result_bus_number"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="HardcodedText,RtlSymmetry" />
+        android:textSize="64sp" />
 
     <TextView
         android:id="@+id/textView_result_bus_comesIn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
-        android:gravity="start"
+        android:layout_gravity="center"
         android:ellipsize="end"
+        android:layout_marginStart="12dp"
         android:fontFamily="@font/modern_sans"
+        android:gravity="start"
+        android:paddingStart="0dp"
+        android:paddingEnd="8dp"
         android:lines="3"
         android:maxLines="3"
-        android:paddingStart="20dp"
         android:scrollHorizontally="false"
         android:singleLine="false"
-        android:text="Comes in 10 minutes."
         android:textColor="@color/white"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toRightOf="@id/textView_result_bus_number"
-        app:layout_constraintTop_toBottomOf="@id/textView_result_bus_info"
-        tools:ignore="HardcodedText,RtlSymmetry" />
-
-
-</android.support.constraint.ConstraintLayout>
+        android:textSize="20sp" />
+</LinearLayout>
