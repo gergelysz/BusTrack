@@ -45,7 +45,6 @@ import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DAR
  */
 public class ListedBusDetailsFragment extends DialogFragment {
 
-    private static final String TAG = "LBDFragment";
     private NavigationMapRoute navigationMapRoute;
     private DirectionsRoute currentRoute;
     private MapView mapViewListedRouteForUser;

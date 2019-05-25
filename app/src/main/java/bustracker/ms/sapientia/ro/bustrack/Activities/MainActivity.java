@@ -24,7 +24,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -38,7 +37,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.gson.Gson;
@@ -273,7 +271,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         currentLocation = new Location("");
 
-        currentUser = new User("0", "waiting for bus", Timestamp.now(), null, null, "0", "0");
+        currentUser = new User("0", "waiting for bus", null, null, "0", "0");
 
         broadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -449,8 +447,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .icon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user))
             );
         } else if (currentUser.getId() != null && loaded) {
-            currentUser.setTimestamp(Timestamp.now());
-
             currentUserMarker.setPosition(
                     new LatLng(
                             Float.valueOf(currentUser.getLatitude()),
@@ -471,7 +467,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * and drawing user on map with marker
      * if he/she is on bus.
      */
-    @SuppressLint("LogNotTimber")
     private void getUsersData() {
         firestoreDb.collection("users").addSnapshotListener(MainActivity.this, (queryDocumentSnapshots, e) -> {
             userIds.clear();
@@ -485,14 +480,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 documentSnapshot.getId(),
                                 documentSnapshot.getString("bus"),
                                 documentSnapshot.getString("status"),
-                                documentSnapshot.getTimestamp("timestamp"),
                                 documentSnapshot.getString("latitude"),
                                 documentSnapshot.getString("longitude"),
                                 documentSnapshot.getString("direction"),
                                 documentSnapshot.getString("speed")
                         );
                         users.add(newUser);
-                        Log.d(TAG, "New user data from database: " + newUser.getId() + " " + newUser.getBus() + " " + newUser.getStatus() + " " + newUser.getSpeed());
                         if (newUser.getStatus().equals("on bus")) {
                             usersMarkers.put(documentSnapshot.getId(), mapboxMap.addMarker(new MarkerOptions()
                                     .position(new LatLng(Double.parseDouble(newUser.getLatitude()), Double.parseDouble(newUser.getLongitude())))

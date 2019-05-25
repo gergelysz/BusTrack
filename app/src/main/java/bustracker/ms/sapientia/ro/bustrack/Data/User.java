@@ -1,33 +1,28 @@
 package bustracker.ms.sapientia.ro.bustrack.Data;
 
-import com.google.firebase.Timestamp;
-
 public class User {
 
     private String id;
     private String bus;
     private String status;
-    private Timestamp timestamp;
     private String latitude;
     private String longitude;
     private String direction;
     private String speed;
 
-    public User(String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction, String speed) {
+    public User(String bus, String status, String latitude, String longitude, String direction, String speed) {
         this.bus = bus;
         this.status = status;
-        this.timestamp = timestamp;
         this.latitude = latitude;
         this.longitude = longitude;
         this.direction = direction;
         this.speed = speed;
     }
 
-    public User(String id, String bus, String status, Timestamp timestamp, String latitude, String longitude, String direction, String speed) {
+    public User(String id, String bus, String status, String latitude, String longitude, String direction, String speed) {
         this.id = id;
         this.bus = bus;
         this.status = status;
-        this.timestamp = timestamp;
         this.latitude = latitude;
         this.longitude = longitude;
         this.direction = direction;
@@ -56,10 +51,6 @@ public class User {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public void setTimestamp(Timestamp timestamp) {
-        this.timestamp = timestamp;
     }
 
     public String getLatitude() {

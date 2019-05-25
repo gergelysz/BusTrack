@@ -8,12 +8,12 @@ public class Bus {
     private String number;
     private String firstStationName;
     private String lastStationName;
-    private List<String> firstStationLeavingTime = new ArrayList<>();
-    private List<String> lastStationLeavingTime = new ArrayList<>();
-    private List<String> firstStationLeavingTimeWeekend = new ArrayList<>();
-    private List<String> lastStationLeavingTimeWeekend = new ArrayList<>();
-    private List<String> stationsFromFirstStation = new ArrayList<>();
-    private List<String> stationsFromLastStation = new ArrayList<>();
+    private final List<String> firstStationLeavingTime = new ArrayList<>();
+    private final List<String> lastStationLeavingTime = new ArrayList<>();
+    private final List<String> firstStationLeavingTimeWeekend = new ArrayList<>();
+    private final List<String> lastStationLeavingTimeWeekend = new ArrayList<>();
+    private final List<String> stationsFromFirstStation = new ArrayList<>();
+    private final List<String> stationsFromLastStation = new ArrayList<>();
 
     Bus() {
     }
