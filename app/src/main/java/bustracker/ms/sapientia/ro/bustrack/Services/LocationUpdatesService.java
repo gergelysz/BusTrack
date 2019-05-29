@@ -130,6 +130,11 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
+        builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        builder.setSmallIcon(R.drawable.ic_bus_station)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(R.string.app_is_running_in_the_background));
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             int importance = NotificationManager.IMPORTANCE_NONE;
             assert notificationManager != null;
@@ -138,10 +143,6 @@ public class LocationUpdatesService extends Service implements GoogleApiClient.C
                 mChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance);
                 notificationManager.createNotificationChannel(mChannel);
             }
-            builder = new NotificationCompat.Builder(this, CHANNEL_ID);
-            builder.setSmallIcon(R.drawable.ic_bus_station)
-                    .setContentTitle(getString(R.string.app_name))
-                    .setContentText(getString(R.string.app_is_running_in_the_background));
             startForeground(NOTIFICATION_ID, builder.build());
         } else {
             builder = new NotificationCompat.Builder(this, CHANNEL_ID);

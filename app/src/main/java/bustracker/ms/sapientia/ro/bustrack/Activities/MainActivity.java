@@ -30,6 +30,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RadioButton;
@@ -58,6 +59,7 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
+import com.mapbox.mapboxsdk.plugins.annotation.SymbolManager;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
@@ -144,6 +146,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressLint("StaticFieldLeak")
     public static FirebaseFirestore firestoreDb;
     private PermissionsManager permissionsManager;
+
+    private SymbolManager symbolManager;
 
     public MainActivity() {
     }
@@ -260,6 +264,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(@NonNull final MapboxMap mapboxMap) {
         this.mapboxMap = mapboxMap;
 
+        // Read saved settings
         readSettings();
 
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
@@ -394,8 +399,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         unregisterReceiver(broadcastReceiver);
         if (currentUser.getId() != null) {
             firestoreDb.collection("users").document(currentUser.getId()).delete();
-            currentUser.setId(null);// = null;
         }
+        stopService(new Intent(MainActivity.this, LocationUpdatesService.class));
         super.onDestroy();
     }
 
@@ -752,18 +757,48 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 selectedStation = autoCompleteTextViewSearch.getText().toString();
             }
 
+            CheckBox checkBoxShowClosestBuses = dialog.findViewById(R.id.checkbox_drawRoute_selectStationClosest);
+
+            List<String> closestStations = null;
+
+            if (checkBoxShowClosestBuses.isChecked()) {
+                closestStations = new ArrayList<>();
+                Location locationStation = new Location("");
+                int distance = 1500;
+                for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
+                    locationStation.setLatitude(entry.getValue().getLatitude());
+                    locationStation.setLongitude(entry.getValue().getLongitude());
+                    if (distance > currentLocation.distanceTo(locationStation)) {
+                        closestStations.add(entry.getKey());
+                    }
+                }
+            }
+
             HashMap<Bus, Integer> resultBuses = new HashMap<>();
             ArrayList<ListedBusData> listedBusData = new ArrayList<>();
 
             if (!selectedStation.isEmpty()) {
                 for (Bus bus : buses.values()) {
-                    if (bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation)) {
-                        resultBuses.put(bus, 0);
-                        currentUser.setDirection("0");
-                    } else if (bus.getStationsFromLastStation().contains(selectedStation) || bus.getFirstStationName().equals(selectedStation)) {
-                        resultBuses.put(bus, 1);
-                        currentUser.setDirection("1");
+                    if (closestStations != null) {
+                        if ((bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation))
+                                && !Collections.disjoint(bus.getStationsFromFirstStation(), closestStations)) {
+                            resultBuses.put(bus, 0);
+                            currentUser.setDirection("0");
+                        } else if ((bus.getStationsFromLastStation().contains(selectedStation) || bus.getFirstStationName().equals(selectedStation))
+                                && !Collections.disjoint(bus.getStationsFromLastStation(), closestStations)) {
+                            resultBuses.put(bus, 1);
+                            currentUser.setDirection("1");
+                        }
+                    } else {
+                        if (bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation)) {
+                            resultBuses.put(bus, 0);
+                            currentUser.setDirection("0");
+                        } else if (bus.getStationsFromLastStation().contains(selectedStation) || bus.getFirstStationName().equals(selectedStation)) {
+                            resultBuses.put(bus, 1);
+                            currentUser.setDirection("1");
+                        }
                     }
+
                 }
             }
 

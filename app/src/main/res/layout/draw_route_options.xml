@@ -2,72 +2,80 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content"
+    android:layout_alignParentTop="true"
+    android:layout_gravity="center"
+    android:background="@drawable/popup_style_set"
+    android:padding="8dp">
 
-    <RelativeLayout
+    <TextView
+        android:id="@+id/textView_drawRoute_select_your_bus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:fontFamily="@font/modern_sans"
+        android:text="@string/select_the_station_where_you_want_to_go"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
+
+    <AutoCompleteTextView
+        android:id="@+id/autoCompleteTextView_search_station"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:background="@drawable/popup_style_set"
-        android:padding="12dp"
-        tools:ignore="UselessParent">
+        android:layout_below="@id/textView_drawRoute_select_your_bus"
+        android:layout_centerHorizontal="true"
+        android:layout_margin="12dp"
+        android:background="@color/darkerGray"
+        android:fontFamily="@font/modern_sans"
+        android:hint="@string/enter_the_station_name_here"
+        android:inputType="text"
+        android:padding="8dp"
+        android:textColor="@color/white"
+        android:textColorHint="@color/white"
+        android:textSize="16sp" />
 
-        <TextView
-            android:id="@+id/textView_drawRoute_select_your_bus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/modern_sans"
-            android:text="@string/select_the_station_where_you_want_to_go"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
+    <TextView
+        android:id="@+id/textView_or_select"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/autoCompleteTextView_search_station"
+        android:layout_centerHorizontal="true"
+        android:fontFamily="@font/modern_sans"
+        android:text="@string/or_select_your_station_from_this_list"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
 
-        <AutoCompleteTextView
-            android:id="@+id/autoCompleteTextView_search_station"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/textView_drawRoute_select_your_bus"
-            android:layout_centerHorizontal="true"
-            android:layout_margin="12dp"
-            android:background="@color/darkerGray"
-            android:fontFamily="@font/modern_sans"
-            android:hint="@string/enter_the_station_name_here"
-            android:inputType="text"
-            android:padding="8dp"
-            android:textColor="@color/white"
-            android:textColorHint="@color/white"
-            android:textSize="16sp" />
+    <Spinner
+        android:id="@+id/spinner_drawRoute_selectStation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textView_or_select"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/white"
+        android:popupBackground="@color/white"
+        tools:targetApi="lollipop" />
 
-        <TextView
-            android:id="@+id/textView_or_select"
-            android:layout_width="wrap_content"
-            android:layout_below="@id/autoCompleteTextView_search_station"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/modern_sans"
-            android:text="@string/or_select_your_station_from_this_list"
-            android:layout_centerHorizontal="true"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
+    <CheckBox
+        android:id="@+id/checkbox_drawRoute_selectStationClosest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/spinner_drawRoute_selectStation"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="8dp"
+        android:buttonTint="@color/white"
+        android:text="@string/show_only_buses_close_to_you"
+        android:textColor="@color/white"
+        tools:targetApi="lollipop" />
 
-        <Spinner
-            android:id="@+id/spinner_drawRoute_selectStation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/textView_or_select"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="@color/white"
-            android:popupBackground="@color/white"
-            tools:targetApi="lollipop" />
-
-        <Button
-            android:id="@+id/button_drawRoute_apply"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_below="@+id/spinner_drawRoute_selectStation"
-            android:layout_centerHorizontal="true"
-            android:background="@color/darkerGray"
-            android:fontFamily="@font/modern_sans"
-            android:text="@string/apply"
-            android:textColor="@color/white"
-            android:textSize="12sp" />
-    </RelativeLayout>
+    <Button
+        android:id="@+id/button_drawRoute_apply"
+        android:layout_width="52dp"
+        android:layout_height="32dp"
+        android:layout_below="@+id/checkbox_drawRoute_selectStationClosest"
+        android:layout_centerHorizontal="true"
+        android:background="@color/lighterDarkGray"
+        android:fontFamily="@font/modern_sans"
+        android:text="@string/apply"
+        android:textColor="@color/white"
+        android:textSize="12sp" />
 </RelativeLayout>
