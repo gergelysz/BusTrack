@@ -1,4 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Adapter;
+package bustracker.ms.sapientia.ro.bustrack.adapter;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
+import bustracker.ms.sapientia.ro.bustrack.data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.R;
 
 public class ListedBusAdapter extends ArrayAdapter<ListedBusData> {

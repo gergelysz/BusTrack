@@ -1,4 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Services;
+package bustracker.ms.sapientia.ro.bustrack.services;
 
 import android.Manifest;
 import android.app.NotificationChannel;
@@ -24,12 +24,12 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
-import bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity;
+import bustracker.ms.sapientia.ro.bustrack.activities.MainActivity;
 import bustracker.ms.sapientia.ro.bustrack.BuildConfig;
 import bustracker.ms.sapientia.ro.bustrack.R;
 
-import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.currentUser;
-import static bustracker.ms.sapientia.ro.bustrack.Activities.MainActivity.firestoreDb;
+import static bustracker.ms.sapientia.ro.bustrack.activities.MainActivity.currentUser;
+import static bustracker.ms.sapientia.ro.bustrack.activities.MainActivity.firestoreDb;
 
 public class LocationUpdatesService extends Service implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {

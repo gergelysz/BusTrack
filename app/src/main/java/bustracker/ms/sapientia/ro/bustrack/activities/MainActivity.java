@@ -1,4 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Activities;
+package bustracker.ms.sapientia.ro.bustrack.activities;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -59,13 +59,13 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
-import com.mapbox.mapboxsdk.plugins.annotation.SymbolManager;
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,35 +73,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import bustracker.ms.sapientia.ro.bustrack.Adapter.ListedBusAdapter;
-import bustracker.ms.sapientia.ro.bustrack.Data.Bus;
-import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
-import bustracker.ms.sapientia.ro.bustrack.Data.User;
-import bustracker.ms.sapientia.ro.bustrack.Fragments.ListedBusDetailsFragment;
-import bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
-import bustracker.ms.sapientia.ro.bustrack.Services.LocationUpdatesService;
+import bustracker.ms.sapientia.ro.bustrack.adapter.ListedBusAdapter;
+import bustracker.ms.sapientia.ro.bustrack.data.Bus;
+import bustracker.ms.sapientia.ro.bustrack.data.ListedBusData;
+import bustracker.ms.sapientia.ro.bustrack.data.User;
+import bustracker.ms.sapientia.ro.bustrack.fragments.ListedBusDetailsFragment;
+import bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment;
+import bustracker.ms.sapientia.ro.bustrack.services.LocationUpdatesService;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.CURRENT_LOCATION_FOCUS;
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.THEME_ACCOMMODATION;
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.UPDATE_FREQUENCY;
+import static bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment.CURRENT_LOCATION_FOCUS;
+import static bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment.DARK_MAP_THEME;
+import static bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment.THEME_ACCOMMODATION;
+import static bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment.UPDATE_FREQUENCY;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, PermissionsListener, NavigationView.OnNavigationItemSelectedListener {
 
-    @SuppressLint("StaticFieldLeak")
-    private static MainActivity instance;
-
-    public static MainActivity getInstance() {
-        return instance;
-    }
-
     private boolean loaded = false;
-    private static final String TAG = "MainActivity";
-
     public static User currentUser = null;
 
     private final Map<String, Bus> buses = new HashMap<>();
@@ -146,8 +137,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressLint("StaticFieldLeak")
     public static FirebaseFirestore firestoreDb;
     private PermissionsManager permissionsManager;
-
-    private SymbolManager symbolManager;
 
     public MainActivity() {
     }
@@ -338,7 +327,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         getUsersData();
         // Get the buses data from database
         getBusesDataFromDatabase();
-
     }
 
     /**
@@ -602,14 +590,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         imageOnBus = dialog.findViewById(R.id.image_status_on_bus);
 
         final TextView textView = dialog.findViewById(R.id.editText_sab_selectBus);
-
         final Spinner spinner = dialog.findViewById(R.id.spinner_statAndBus);
+        Button applyButton = dialog.findViewById(R.id.button_apply_status_and_bus);
 
         textView.setVisibility(View.GONE);
         spinner.setVisibility(View.GONE);
-
-        Button applyButton = dialog.findViewById(R.id.button_apply_status_and_bus);
-        applyButton.setVisibility(View.INVISIBLE);
+        applyButton.setVisibility(View.GONE);
 
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, getResources().getStringArray(R.array.bus_numbers));
@@ -643,8 +629,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     /**
-     * Function to read data about all of the buses
-     * from the 'busesData' collection.
+     * Function to read data about all of the
+     * buses from the 'busesData' collection.
      */
     private void getBusesDataFromDatabase() {
         firestoreDb.collection("busesData").get().addOnSuccessListener(queryDocumentSnapshots -> {
@@ -658,10 +644,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     /**
-     * Function to save stations data to
-     * sharedPreferences so the app
-     * won't need to reload data from the
-     * database.
+     * Function to save stations data to sharedPreferences so
+     * the app won't need to reload data from the database.
      */
     private void saveStationsOffline() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -699,9 +683,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         int currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         int currentMin = Calendar.getInstance().get(Calendar.MINUTE);
 
-        ArrayList<Integer> closestHours = new ArrayList<>();
-        ArrayList<Integer> closestMinutes = new ArrayList<>();
-
         dialog = new Dialog(MainActivity.this);
         Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.argb(100, 0, 0, 0)));
         dialog.setContentView(R.layout.draw_route_options);
@@ -709,22 +690,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
+        // Get UI elements
         Button buttonSelectedRouteApply = dialog.findViewById(R.id.button_drawRoute_apply);
-
         final Spinner spinner = dialog.findViewById(R.id.spinner_drawRoute_selectStation);
         AutoCompleteTextView autoCompleteTextViewSearch = dialog.findViewById(R.id.autoCompleteTextView_search_station);
+        final Spinner spinnerForDistance = dialog.findViewById(R.id.spinner_drawRoute_selectStationClosestDistance);
+        CheckBox checkBoxShowClosestBuses = dialog.findViewById(R.id.checkbox_drawRoute_selectStationClosest);
+
+        spinnerForDistance.setVisibility(View.GONE);
 
         // Sets adapter for search EditText
         String[] searchStationsList = stations.keySet().toArray(new String[0]);
         ArrayAdapter<String> searchAdapter = new ArrayAdapter<>(this, android.R.layout.select_dialog_item, searchStationsList);
         autoCompleteTextViewSearch.setAdapter(searchAdapter);
 
-        /*
-            If the user used the search-box,
-            then the spinner will be disabled.
-            If he/she selected the station from
-            the spinner, that value will be used.
-         */
+        // If the user used the search-box, then the spinner will be disabled.
+        // If he/she selected the station from the spinner, that value will be used.
         autoCompleteTextViewSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -739,17 +720,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             @Override
             public void afterTextChanged(Editable s) {
-
             }
         });
 
         List<String> stationsList = new ArrayList<>(stations.keySet());
         Collections.sort(stationsList);
 
+        // Load bus stations into spinner
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.spinner_item, stationsList);
         spinner.setAdapter(spinnerAdapter);
 
+        // Load distance options for filtering into spinner
+        ArrayList<Integer> distances = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 1500));
+        ArrayAdapter<Integer> spinnerForDistanceAdapter = new ArrayAdapter<>(MainActivity.this,
+                R.layout.spinner_item, distances);
+        spinnerForDistance.setAdapter(spinnerForDistanceAdapter);
+
+        // Listener for checkbox change
+        checkBoxShowClosestBuses.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                spinnerForDistance.setVisibility(View.VISIBLE);
+            } else {
+                spinnerForDistance.setVisibility(View.GONE);
+            }
+        });
+
+        // Listener for button click
         buttonSelectedRouteApply.setOnClickListener(v -> {
             if (spinner.isEnabled()) {
                 selectedStation = spinner.getSelectedItem().toString();
@@ -757,14 +754,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 selectedStation = autoCompleteTextViewSearch.getText().toString();
             }
 
-            CheckBox checkBoxShowClosestBuses = dialog.findViewById(R.id.checkbox_drawRoute_selectStationClosest);
-
             List<String> closestStations = null;
 
+            // If checkbox for listing closer buses is checked spinner will be set visible and then bus stations
+            // will be added to a list and then later checked if that bus goes through those stations.
             if (checkBoxShowClosestBuses.isChecked()) {
+                spinnerForDistance.setVisibility(View.VISIBLE);
                 closestStations = new ArrayList<>();
                 Location locationStation = new Location("");
-                int distance = 1500;
+                int distance = Integer.valueOf(spinnerForDistance.getSelectedItem().toString());
                 for (Map.Entry<String, LatLng> entry : stations.entrySet()) {
                     locationStation.setLatitude(entry.getValue().getLatitude());
                     locationStation.setLongitude(entry.getValue().getLongitude());
@@ -772,6 +770,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         closestStations.add(entry.getKey());
                     }
                 }
+            } else {
+                spinnerForDistance.setVisibility(View.GONE);
             }
 
             HashMap<Bus, Integer> resultBuses = new HashMap<>();
@@ -779,6 +779,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if (!selectedStation.isEmpty()) {
                 for (Bus bus : buses.values()) {
+                    // If the user wants to see only the closer buses
                     if (closestStations != null) {
                         if ((bus.getStationsFromFirstStation().contains(selectedStation) || bus.getLastStationName().equals(selectedStation))
                                 && !Collections.disjoint(bus.getStationsFromFirstStation(), closestStations)) {

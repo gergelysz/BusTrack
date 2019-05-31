@@ -1,11 +1,11 @@
-package bustracker.ms.sapientia.ro.bustrack.Activities;
+package bustracker.ms.sapientia.ro.bustrack.activities;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
 import java.util.Objects;
 
-import bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment;
+import bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment;
 import bustracker.ms.sapientia.ro.bustrack.R;
 
 public class SettingsActivity extends AppCompatActivity {

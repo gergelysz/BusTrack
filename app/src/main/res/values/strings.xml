@@ -74,7 +74,7 @@
     <string name="app_is_running_in_the_background">App is running in the background</string>
     <string name="select_bus_to_show_its_program">Select the bus to show it\'s program</string>
     <string name="probably_left">Probably left.</string>
-    <string name="show_only_buses_close_to_you">Show only buses close to you</string>
+    <string name="show_only_buses_close_to_you">Show only buses close to you (in meters)</string>
     <string-array name="update_frequency_options">
         <item>Fastest</item>
         <item>5 seconds</item>

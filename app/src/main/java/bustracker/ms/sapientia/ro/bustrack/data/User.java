@@ -1,4 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Data;
+package bustracker.ms.sapientia.ro.bustrack.data;
 
 public class User {
 

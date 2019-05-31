@@ -6,5 +6,6 @@
     android:gravity="center"
     android:padding="8dp"
     android:textColor="#FFF"
+    android:fontFamily="@font/modern_sans"
     android:background="@color/darkerDarkGray"
     android:textSize="16sp" />

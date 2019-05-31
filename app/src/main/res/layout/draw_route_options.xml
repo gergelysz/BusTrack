@@ -63,15 +63,26 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="8dp"
         android:buttonTint="@color/white"
+        android:fontFamily="@font/modern_sans"
         android:text="@string/show_only_buses_close_to_you"
         android:textColor="@color/white"
+        tools:targetApi="lollipop" />
+
+    <Spinner
+        android:id="@+id/spinner_drawRoute_selectStationClosestDistance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/checkbox_drawRoute_selectStationClosest"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/white"
+        android:popupBackground="@color/white"
         tools:targetApi="lollipop" />
 
     <Button
         android:id="@+id/button_drawRoute_apply"
         android:layout_width="52dp"
         android:layout_height="32dp"
-        android:layout_below="@+id/checkbox_drawRoute_selectStationClosest"
+        android:layout_below="@+id/spinner_drawRoute_selectStationClosestDistance"
         android:layout_centerHorizontal="true"
         android:background="@color/lighterDarkGray"
         android:fontFamily="@font/modern_sans"

@@ -1,4 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Fragments;
+package bustracker.ms.sapientia.ro.bustrack.fragments;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;

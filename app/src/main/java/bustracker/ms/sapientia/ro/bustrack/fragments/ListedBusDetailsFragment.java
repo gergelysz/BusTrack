@@ -1,5 +1,4 @@
-package bustracker.ms.sapientia.ro.bustrack.Fragments;
-
+package bustracker.ms.sapientia.ro.bustrack.fragments;
 
 import android.content.SharedPreferences;
 import android.graphics.drawable.ColorDrawable;
@@ -32,13 +31,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Objects;
 
-import bustracker.ms.sapientia.ro.bustrack.Data.ListedBusData;
+import bustracker.ms.sapientia.ro.bustrack.data.ListedBusData;
 import bustracker.ms.sapientia.ro.bustrack.R;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static bustracker.ms.sapientia.ro.bustrack.Fragments.SettingsFragment.DARK_MAP_THEME;
+import static bustracker.ms.sapientia.ro.bustrack.fragments.SettingsFragment.DARK_MAP_THEME;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -68,6 +67,8 @@ public class ListedBusDetailsFragment extends DialogFragment {
         ListedBusData listedBusData = (ListedBusData) getArguments().getSerializable("listedBusAdapter");
         assert listedBusData != null;
 
+        // Serialization, suppress warning.
+        @SuppressWarnings("unchecked")
         Map<String, LatLng> stations = (Map<String, LatLng>) getArguments().getSerializable("stations");
         assert stations != null;
 
