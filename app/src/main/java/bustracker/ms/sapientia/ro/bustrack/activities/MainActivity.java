@@ -24,6 +24,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -39,7 +40,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.mapbox.android.core.permissions.PermissionsListener;
@@ -72,6 +76,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import javax.annotation.Nullable;
 
 import bustracker.ms.sapientia.ro.bustrack.R;
 import bustracker.ms.sapientia.ro.bustrack.adapter.ListedBusAdapter;
@@ -434,6 +440,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .addOnSuccessListener(documentReference -> currentUser.setId(documentReference.getId()))
                     .addOnFailureListener(e -> Toast.makeText(MainActivity.this, (getString(R.string.user_data_upload_fail_details) + e.getMessage()), Toast.LENGTH_SHORT).show());
             loaded = true;
+            setCameraPosition(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()));
             currentUserMarker = mapboxMap.addMarker(new MarkerOptions()
                     .position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
                     .title("You")
@@ -461,12 +468,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      * if he/she is on bus.
      */
     private void getUsersData() {
-        firestoreDb.collection("users").addSnapshotListener(MainActivity.this, (queryDocumentSnapshots, e) -> {
+        firestoreDb.collection("users").addSnapshotListener((queryDocumentSnapshots, e) -> {
             userIds.clear();
             assert queryDocumentSnapshots != null;
             for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
                 if (!mapView.isDestroyed()) {
                     userIds.add(documentSnapshot.getId());
+
                     // if user isn't yet in the local users list
                     if (!documentSnapshot.getId().equals(currentUser.getId()) && !usersMarkers.keySet().contains(documentSnapshot.getId())) {
                         User newUser = new User(
@@ -493,8 +501,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             LatLng newPosition = new LatLng(
                                     Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("latitude"))),
                                     Double.parseDouble(Objects.requireNonNull(documentSnapshot.getString("longitude"))));
-                            Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setPosition(newPosition);
-                            Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())).setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus));
+                            usersMarkers.get(documentSnapshot.getId()).setPosition(newPosition);
+                            usersMarkers.get(documentSnapshot.getId()).setIcon(IconFactory.getInstance(MainActivity.this).fromResource(R.drawable.ic_user_bus));
                         } else {
                             mapboxMap.removeMarker(Objects.requireNonNull(usersMarkers.get(documentSnapshot.getId())));
                             usersMarkers.remove(documentSnapshot.getId());
@@ -612,6 +620,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         imageOnBus.setOnClickListener(v -> {
             currentUser.setStatus("on bus");
+            currentUser.setBus(spinner.getSelectedItem().toString());
             userStatusImageView.setImageResource(R.drawable.ic_bus);
             userStatusTextView.setText(getString(R.string.current_status, currentUser.getStatus()));
             textView.setVisibility(View.VISIBLE);
